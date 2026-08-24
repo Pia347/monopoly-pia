@@ -3,92 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly - Fase 2</title>
+    <title>Monopoly - Fase 3</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
-        .panel { background: white; max-width: 600px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .panel { background: white; max-width: 800px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input, button { padding: 10px; margin: 5px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
         button { background: #00796b; color: white; cursor: pointer; border: none; font-weight: bold; }
-        button:hover { background: #004d40; }
         
-        #juego { display: none; } /* Ocultamos el juego hasta que ingresen su nombre */
+        #juego { display: none; }
         
-        .jugador-card { display: flex; justify-content: space-between; padding: 15px; margin: 10px 0; border-radius: 8px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black;}
-        ul { list-style: none; padding: 0; text-align: left;}
-        li { padding: 8px; border-bottom: 1px solid #eee; }
+        .jugador-card { display: inline-block; padding: 10px; margin: 5px; border-radius: 8px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black;}
+        
+        /* Estilos del nuevo tablero */
+        #tablero { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; gap: 5px; }
+        .casilla { width: 60px; height: 60px; background: #eee; border: 2px solid #999; display: flex; align-items: center; justify-content: center; position: relative; font-weight: bold; color: #555; }
+        .ficha { width: 15px; height: 15px; border-radius: 50%; position: absolute; border: 1px solid white; box-shadow: 0 0 3px black; }
+        /* Posiciones para que las fichas no se encimen demasiado */
+        .ficha:nth-child(1) { top: 5px; left: 5px; }
+        .ficha:nth-child(2) { top: 5px; right: 5px; }
+        .ficha:nth-child(3) { bottom: 5px; left: 5px; }
+        .ficha:nth-child(4) { bottom: 5px; right: 5px; }
     </style>
 </head>
 <body>
 
-    <!-- Pantalla 1: Ingreso -->
     <div id="login" class="panel">
         <h1>Bienvenido a Monopoly</h1>
         <input type="text" id="nombreJugador" placeholder="Escribe tu nombre">
         <button onclick="entrarAlJuego()">Unirse a la partida</button>
     </div>
 
-    <!-- Pantalla 2: El Juego -->
     <div id="juego" class="panel">
-        <h2>Tablero de Posiciones</h2>
         <button onclick="tirar()">🎲 Tirar Dados</button>
+        <div id="lista-jugadores"></div>
         
-        <div id="lista-jugadores">
-            <!-- Aquí se dibujarán las tarjetas de los jugadores conectados -->
-        </div>
-
-        <h3>Historial de Movimientos:</h3>
-        <ul id="mensajes"></ul>
+        <!-- Aquí se dibujará el tablero visualmente -->
+        <div id="tablero"></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
 
-        // 1. Ocultar el inicio y mostrar el juego
+        // Crear las 40 casillas al cargar la página
+        function crearTablero() {
+            const tablero = document.getElementById('tablero');
+            for(let i = 0; i < 40; i++) {
+                const casilla = document.createElement('div');
+                casilla.className = 'casilla';
+                casilla.id = 'casilla-' + i; // Le damos un ID único a cada casilla (ej. casilla-0)
+                casilla.innerText = i; // Mostramos el número
+                
+                if(i === 0) casilla.innerText = "SALIDA";
+                tablero.appendChild(casilla);
+            }
+        }
+        crearTablero();
+
         function entrarAlJuego() {
             const nombre = document.getElementById('nombreJugador').value;
-            if (nombre.trim() === "") {
-                alert("Por favor escribe tu nombre");
-                return;
-            }
+            if (nombre.trim() === "") return alert("Escribe tu nombre");
             socket.emit('unirseAlJuego', nombre);
-            
             document.getElementById('login').style.display = 'none';
             document.getElementById('juego').style.display = 'block';
         }
 
-        // 2. Tirar los dados
-        function tirar() {
-            socket.emit('tirarDado');
-        }
+        function tirar() { socket.emit('tirarDado'); }
 
-        // 3. El servidor nos manda las estadísticas nuevas
         socket.on('actualizarJugadores', (jugadores) => {
             const contenedor = document.getElementById('lista-jugadores');
-            contenedor.innerHTML = ''; // Limpiamos la lista vieja
+            contenedor.innerHTML = ''; 
+            
+            // 1. Limpiar todas las fichas del tablero antes de volver a dibujarlas
+            document.querySelectorAll('.ficha').forEach(f => f.remove());
 
-            // Dibujamos una tarjeta por cada jugador conectado
+            // 2. Dibujar tarjetas y fichas nuevas
             for (let id in jugadores) {
                 const j = jugadores[id];
+                
+                // Crear la tarjeta de estadísticas
                 const div = document.createElement('div');
                 div.className = 'jugador-card';
                 div.style.backgroundColor = j.color;
-                
-                div.innerHTML = `
-                    <span>👤 ${j.nombre}</span>
-                    <span>💰 $${j.dinero}</span>
-                    <span>📍 Casilla: ${j.posicion} / 39</span>
-                `;
+                div.innerHTML = `👤 ${j.nombre} | 💰 $${j.dinero}`;
                 contenedor.appendChild(div);
-            }
-        });
 
-        // 4. El servidor avisa qué sacaron en los dados
-        socket.on('resultadoDado', (data) => {
-            const lista = document.getElementById('mensajes');
-            const item = document.createElement('li');
-            item.innerHTML = `<b>${data.nombre}</b> sacó un <b>${data.dado}</b> 🎲 (${data.dado1} y ${data.dado2})`;
-            lista.prepend(item); // Pone el mensaje arriba del todo
+                // Crear la bolita (ficha) y ponerla en su casilla correspondiente
+                const casillaDestino = document.getElementById('casilla-' + j.posicion);
+                if(casillaDestino) {
+                    const ficha = document.createElement('div');
+                    ficha.className = 'ficha';
+                    ficha.style.backgroundColor = j.color;
+                    casillaDestino.appendChild(ficha);
+                }
+            }
         });
     </script>
 </body>
