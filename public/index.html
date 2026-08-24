@@ -3,26 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly - Fase 3</title>
+    <title>Monopoly - Fase 4</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
-        .panel { background: white; max-width: 800px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
+        .panel { background: white; max-width: 900px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input, button { padding: 10px; margin: 5px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
         button { background: #00796b; color: white; cursor: pointer; border: none; font-weight: bold; }
         
         #juego { display: none; }
-        
         .jugador-card { display: inline-block; padding: 10px; margin: 5px; border-radius: 8px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black;}
         
-        /* Estilos del nuevo tablero */
-        #tablero { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; gap: 5px; }
-        .casilla { width: 60px; height: 60px; background: #eee; border: 2px solid #999; display: flex; align-items: center; justify-content: center; position: relative; font-weight: bold; color: #555; }
-        .ficha { width: 15px; height: 15px; border-radius: 50%; position: absolute; border: 1px solid white; box-shadow: 0 0 3px black; }
-        /* Posiciones para que las fichas no se encimen demasiado */
-        .ficha:nth-child(1) { top: 5px; left: 5px; }
-        .ficha:nth-child(2) { top: 5px; right: 5px; }
-        .ficha:nth-child(3) { bottom: 5px; left: 5px; }
-        .ficha:nth-child(4) { bottom: 5px; right: 5px; }
+        /* Nuevos estilos de las tarjetas de propiedad */
+        #tablero { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; gap: 8px; }
+        .casilla { width: 80px; height: 110px; background: white; border: 2px solid #333; display: flex; flex-direction: column; position: relative; border-radius: 4px; overflow: hidden; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
+        .color-bar { height: 25px; width: 100%; border-bottom: 2px solid #333; }
+        .nombre { padding: 5px 2px; font-size: 11px; font-weight: bold; flex-grow: 1; display: flex; align-items: center; justify-content: center; line-height: 1.1; }
+        .precio { padding: 4px; font-size: 12px; font-weight: bold; color: #2e7d32; }
+        
+        /* Fichas mejoradas */
+        .ficha { width: 18px; height: 18px; border-radius: 50%; position: absolute; border: 2px solid white; box-shadow: 0 0 5px black; z-index: 10; }
+        .ficha:nth-child(2) { top: 30px; left: 5px; }
+        .ficha:nth-child(3) { top: 30px; right: 5px; }
+        .ficha:nth-child(4) { bottom: 25px; left: 5px; }
+        .ficha:nth-child(5) { bottom: 25px; right: 5px; }
     </style>
 </head>
 <body>
@@ -36,8 +39,6 @@
     <div id="juego" class="panel">
         <button onclick="tirar()">🎲 Tirar Dados</button>
         <div id="lista-jugadores"></div>
-        
-        <!-- Aquí se dibujará el tablero visualmente -->
         <div id="tablero"></div>
     </div>
 
@@ -45,16 +46,34 @@
     <script>
         const socket = io();
 
-        // Crear las 40 casillas al cargar la página
+        // Base de datos de nuestras casillas (¡Aquí puedes inventar tus propios nombres si quieres!)
+        const datosTablero = [
+            { nombre: "SALIDA", precio: 0, color: "#ecf0f1" },
+            { nombre: "Avenida Mediterráneo", precio: 60, color: "#8b4513" },
+            { nombre: "Caja de Comunidad", precio: 0, color: "#ecf0f1" },
+            { nombre: "Avenida Báltica", precio: 60, color: "#8b4513" },
+            { nombre: "Impuestos", precio: 200, color: "#ecf0f1" },
+            { nombre: "Ferrocarril Reading", precio: 200, color: "#bdc3c7" },
+            { nombre: "Avenida Oriental", precio: 100, color: "#87ceeb" },
+            { nombre: "Suerte", precio: 0, color: "#ecf0f1" }
+        ];
+
         function crearTablero() {
             const tablero = document.getElementById('tablero');
             for(let i = 0; i < 40; i++) {
+                // Si no he escrito los 40 datos, que ponga uno genérico
+                const info = datosTablero[i] || { nombre: "Propiedad " + i, precio: 150 + (i*10), color: "#f39c12" };
+                
                 const casilla = document.createElement('div');
                 casilla.className = 'casilla';
-                casilla.id = 'casilla-' + i; // Le damos un ID único a cada casilla (ej. casilla-0)
-                casilla.innerText = i; // Mostramos el número
+                casilla.id = 'casilla-' + i;
                 
-                if(i === 0) casilla.innerText = "SALIDA";
+                // Dibujamos la estructura de la tarjeta
+                casilla.innerHTML = `
+                    <div class="color-bar" style="background-color: ${info.color};"></div>
+                    <div class="nombre">${info.nombre}</div>
+                    <div class="precio">${info.precio > 0 ? '$' + info.precio : ''}</div>
+                `;
                 tablero.appendChild(casilla);
             }
         }
@@ -73,22 +92,17 @@
         socket.on('actualizarJugadores', (jugadores) => {
             const contenedor = document.getElementById('lista-jugadores');
             contenedor.innerHTML = ''; 
-            
-            // 1. Limpiar todas las fichas del tablero antes de volver a dibujarlas
             document.querySelectorAll('.ficha').forEach(f => f.remove());
 
-            // 2. Dibujar tarjetas y fichas nuevas
             for (let id in jugadores) {
                 const j = jugadores[id];
                 
-                // Crear la tarjeta de estadísticas
                 const div = document.createElement('div');
                 div.className = 'jugador-card';
                 div.style.backgroundColor = j.color;
                 div.innerHTML = `👤 ${j.nombre} | 💰 $${j.dinero}`;
                 contenedor.appendChild(div);
 
-                // Crear la bolita (ficha) y ponerla en su casilla correspondiente
                 const casillaDestino = document.getElementById('casilla-' + j.posicion);
                 if(casillaDestino) {
                     const ficha = document.createElement('div');
