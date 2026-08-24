@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monopoly - Prueba Multijugador</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #e0f7fa; }
+        button { padding: 15px 30px; font-size: 20px; cursor: pointer; background: #00796b; color: white; border: none; border-radius: 8px; }
+        ul { list-style: none; padding: 0; margin-top: 30px; }
+        li { background: white; margin: 5px auto; padding: 10px; width: 300px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <h1>Lanzamiento de Dado Global</h1>
+    <button onclick="tirar()">🎲 Tirar Dado</button>
+    
+    <ul id="mensajes">
+        <!-- Aquí aparecerán los tiros de todos los jugadores -->
+    </ul>
+
+    <!-- Este script lo provee tu propio servidor automáticamente -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io(); // Conectar al servidor
+
+        // Función que se ejecuta al hacer clic en el botón
+        function tirar() {
+            socket.emit('tirarDado'); // Le gritamos al servidor: "¡Tiré el dado!"
+        }
+
+        // El cliente escucha si el servidor grita "resultadoDado"
+        socket.on('resultadoDado', (data) => {
+            const lista = document.getElementById('mensajes');
+            const item = document.createElement('li');
+            item.innerHTML = `El jugador <b>${data.jugador}</b> sacó un <b>${data.numero}</b>`;
+            
+            // Poner el mensaje más nuevo arriba
+            lista.prepend(item); 
+        });
+    </script>
+</body>
+</html>
