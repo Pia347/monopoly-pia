@@ -4,29 +4,68 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server); // Aquí nace el tiempo real
+const io = new Server(server);
 
 app.use(express.static('public'));
 
-// Esto escucha cuando alguien entra a la página
-io.on('connection', (socket) => {
-    console.log('Un jugador se ha conectado. ID: ' + socket.id);
+// Estado del juego (La memoria del servidor)
+let jugadores = {};
+// Colores para diferenciar a los jugadores en pantalla
+const colores = ['#FF5733', '#33FF57', '#3357FF', '#F1C40F', '#9B59B6', '#E67E22'];
+let colorIndex = 0;
 
-    // Escuchar cuando este jugador específico haga clic en "tirarDado"
-    socket.on('tirarDado', () => {
-        // Generar un número del 1 al 6
-        const resultado = Math.floor(Math.random() * 6) + 1;
+io.on('connection', (socket) => {
+    console.log('Nuevo dispositivo conectado: ' + socket.id);
+
+    // 1. Cuando un jugador pone su nombre para unirse
+    socket.on('unirseAlJuego', (nombre) => {
+        jugadores[socket.id] = {
+            id: socket.id,
+            nombre: nombre,
+            dinero: 1500, // Dinero inicial del Monopoly
+            posicion: 0,  // Casillas de la 0 a la 39
+            color: colores[colorIndex % colores.length]
+        };
+        colorIndex++;
         
-        // io.emit envía el mensaje a TODOS los jugadores conectados al mismo tiempo
-        io.emit('resultadoDado', { 
-            jugador: socket.id.substring(0, 4), // Tomamos solo 4 letras de su ID para que sea corto
-            numero: resultado 
-        });
+        // Le avisamos a todos que las estadísticas cambiaron
+        io.emit('actualizarJugadores', jugadores);
     });
 
-    // Escuchar cuando el jugador cierra la pestaña
+    // 2. Cuando tiran los dados (Ahora son 2 dados)
+    socket.on('tirarDado', () => {
+        const jugador = jugadores[socket.id];
+        if (!jugador) return; // Si el jugador no ha puesto su nombre, ignoramos el clic
+
+        const dado1 = Math.floor(Math.random() * 6) + 1;
+        const dado2 = Math.floor(Math.random() * 6) + 1;
+        const totalDado = dado1 + dado2;
+
+        // Movemos al jugador
+        jugador.posicion += totalDado;
+
+        // Si su posición pasa de 39, dio una vuelta al tablero
+        if (jugador.posicion >= 40) {
+            jugador.posicion -= 40; // Reiniciamos su posición
+            jugador.dinero += 200;  // Bono clásico de Monopoly por pasar GO
+        }
+
+        // Enviamos el historial del dado
+        io.emit('resultadoDado', { 
+            nombre: jugador.nombre, 
+            dado: totalDado,
+            dado1: dado1,
+            dado2: dado2
+        });
+        
+        // Actualizamos el tablero de posiciones para todos
+        io.emit('actualizarJugadores', jugadores);
+    });
+
+    // 3. Cuando alguien cierra la pestaña
     socket.on('disconnect', () => {
-        console.log('Jugador desconectado: ' + socket.id);
+        delete jugadores[socket.id]; // Lo borramos de la partida
+        io.emit('actualizarJugadores', jugadores);
     });
 });
 
