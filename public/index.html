@@ -47,31 +47,34 @@
     <script>
         const socket = io();
 
-        // Base de datos de nuestras casillas (¡Aquí puedes inventar tus propios nombres si quieres!)
+        // Base de datos de nuestras casillas (Aquí pones los nombres y los links de tus imágenes)
         const datosTablero = [
-            { nombre: "SALIDA", precio: 0, color: "#ecf0f1" },
-            { nombre: "Avenida Mediterráneo", precio: 60, color: "#8b4513" },
-            { nombre: "Caja de Comunidad", precio: 0, color: "#ecf0f1" },
-            { nombre: "Avenida Báltica", precio: 60, color: "#8b4513" },
-            { nombre: "Impuestos", precio: 200, color: "#ecf0f1" },
-            { nombre: "Ferrocarril Reading", precio: 200, color: "#bdc3c7" },
-            { nombre: "Avenida Oriental", precio: 100, color: "#87ceeb" },
-            { nombre: "Suerte", precio: 0, color: "#ecf0f1" }
+            { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png" },
+            { nombre: "Mi Tienda", precio: 60, color: "#8b4513", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png" },
+            { nombre: "Caja de Comunidad", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
+            { nombre: "Universidad Técnica de Manabí", precio: 60, color: "#8b4513", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png" },
+            { nombre: "Impuestos", precio: 200, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" },
+            { nombre: "Ferrocarril", precio: 200, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" },
+            { nombre: "Avenida Oriental", precio: 100, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" },
+            { nombre: "Suerte", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" }
         ];
 
         function crearTablero() {
             const tablero = document.getElementById('tablero');
             for(let i = 0; i < 40; i++) {
-                // Si no he escrito los 40 datos, que ponga uno genérico
-                const info = datosTablero[i] || { nombre: "Propiedad " + i, precio: 150 + (i*10), color: "#f39c12" };
+                // Si no has escrito las 40, pone un cuadro por defecto
+                const info = datosTablero[i] || { nombre: "Propiedad " + i, precio: 150 + (i*10), color: "#f39c12", imagen: "" };
                 
                 const casilla = document.createElement('div');
                 casilla.className = 'casilla';
                 casilla.id = 'casilla-' + i;
                 
-                // Dibujamos la estructura de la tarjeta
+                // Aquí le decimos al HTML que dibuje la imagen si es que existe en la lista
+                const etiquetaImagen = info.imagen ? `<img src="${info.imagen}" class="imagen-casilla">` : '';
+
                 casilla.innerHTML = `
                     <div class="color-bar" style="background-color: ${info.color};"></div>
+                    ${etiquetaImagen}
                     <div class="nombre">${info.nombre}</div>
                     <div class="precio">${info.precio > 0 ? '$' + info.precio : ''}</div>
                 `;
