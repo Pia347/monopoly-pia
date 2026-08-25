@@ -13,20 +13,43 @@
         #juego { display: none; }
         .jugador-card { display: inline-block; padding: 10px; margin: 5px; border-radius: 8px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black;}
         
-        /* Nuevos estilos de las tarjetas de propiedad */
-        #tablero { display: flex; flex-wrap: wrap; justify-content: center; margin-top: 20px; gap: 8px; }
-        .casilla { width: 80px; height: 110px; background: white; border: 2px solid #333; display: flex; flex-direction: column; position: relative; border-radius: 4px; overflow: hidden; box-shadow: 2px 2px 5px rgba(0,0,0,0.2); }
-        .color-bar { height: 25px; width: 100%; border-bottom: 2px solid #333; }
-        .nombre { padding: 5px 2px; font-size: 11px; font-weight: bold; flex-grow: 1; display: flex; align-items: center; justify-content: center; line-height: 1.1; }
-        .precio { padding: 4px; font-size: 12px; font-weight: bold; color: #2e7d32; }
+        /* Tablero Circular Estilo CPN */
+        #tablero { 
+            position: relative; 
+            width: 750px; 
+            height: 750px; 
+            margin: 40px auto; 
+            background: #1c2833; /* Color oscuro para el centro como en tu foto */
+            border-radius: 50%; /* Hace que el fondo sea un círculo */
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
         
-        /* Fichas mejoradas */
-        .ficha { width: 18px; height: 18px; border-radius: 50%; position: absolute; border: 2px solid white; box-shadow: 0 0 5px black; z-index: 10; }
-        .ficha:nth-child(2) { top: 30px; left: 5px; }
-        .ficha:nth-child(3) { top: 30px; right: 5px; }
-        .ficha:nth-child(4) { bottom: 25px; left: 5px; }
-        .ficha:nth-child(5) { bottom: 25px; right: 5px; }
-.imagen-casilla { width: 35px; height: 35px; object-fit: contain; margin: 4px auto 0 auto; display: block; }
+        .casilla { 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            width: 60px; /* Más delgadas para que quepan las 40 en círculo */
+            height: 100px; 
+            background: white; 
+            border: 1px solid #7f8c8d; 
+            display: flex; 
+            flex-direction: column; 
+            border-radius: 4px;
+            overflow: hidden;
+            transform-origin: center center; /* El eje de rotación */
+        }
+        
+        .color-bar { height: 20px; width: 100%; border-bottom: 2px solid #333; }
+        .nombre { padding: 2px; font-size: 9.5px; font-weight: bold; flex-grow: 1; display: flex; align-items: center; justify-content: center; line-height: 1.1; text-align: center;}
+        .precio { padding: 2px; font-size: 11px; font-weight: bold; color: #2e7d32; }
+        .imagen-casilla { width: 25px; height: 25px; object-fit: contain; margin: 2px auto 0 auto; display: block; }
+        
+        /* Fichas más pequeñas para este tablero */
+        .ficha { width: 12px; height: 12px; border-radius: 50%; position: absolute; border: 1px solid white; box-shadow: 0 0 3px black; z-index: 10; }
+        .ficha:nth-child(1) { top: 25px; left: 5px; }
+        .ficha:nth-child(2) { top: 25px; right: 5px; }
+        .ficha:nth-child(3) { bottom: 20px; left: 5px; }
+        .ficha:nth-child(4) { bottom: 20px; right: 5px; }
     </style>
 </head>
 <body>
@@ -59,17 +82,23 @@
             { nombre: "Suerte", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" }
         ];
 
-        function crearTablero() {
+       function crearTablero() {
             const tablero = document.getElementById('tablero');
+            
+            // Un logo central opcional
+            tablero.innerHTML = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:white; font-size:30px; font-weight:bold;">MONOPOLY</div>';
+
             for(let i = 0; i < 40; i++) {
-                // Si no has escrito las 40, pone un cuadro por defecto
                 const info = datosTablero[i] || { nombre: "Propiedad " + i, precio: 150 + (i*10), color: "#f39c12", imagen: "" };
                 
                 const casilla = document.createElement('div');
                 casilla.className = 'casilla';
                 casilla.id = 'casilla-' + i;
                 
-                // Aquí le decimos al HTML que dibuje la imagen si es que existe en la lista
+                // ¡LA MAGIA DEL CÍRCULO!
+                const angulo = i * 9; // 9 grados por cada una de las 40 casillas
+                casilla.style.transform = `translate(-50%, -50%) rotate(${angulo}deg) translateY(-320px)`;
+
                 const etiquetaImagen = info.imagen ? `<img src="${info.imagen}" class="imagen-casilla">` : '';
 
                 casilla.innerHTML = `
