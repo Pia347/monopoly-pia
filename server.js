@@ -9,26 +9,29 @@ const io = new Server(server);
 app.use(express.static('public'));
 
 let jugadores = {};
-let propiedades = {}; // NUEVO: Aquí guardaremos quién es dueño de qué
+let propiedades = {}; // Aquí guardamos quién es dueño de qué
 const colores = ['#FF5733', '#33FF57', '#3357FF', '#F1C40F', '#9B59B6', '#E67E22'];
 let colorIndex = 0;
 
 io.on('connection', (socket) => {
     console.log('Nuevo dispositivo: ' + socket.id);
 
+    // 1. Cuando un jugador entra, empieza con 0 vueltas
     socket.on('unirseAlJuego', (nombre) => {
         jugadores[socket.id] = {
             id: socket.id,
             nombre: nombre,
             dinero: 1500,
             posicion: 0,
-            color: colores[colorIndex % colores.length]
+            color: colores[colorIndex % colores.length],
+            vueltas: 0 // <-- El contador de vueltas inicia en 0
         };
         colorIndex++;
         io.emit('actualizarJugadores', jugadores);
-        io.emit('actualizarPropiedades', propiedades); // Avisa de los dueños actuales
+        io.emit('actualizarPropiedades', propiedades);
     });
 
+    // 2. Lógica al tirar el dado
     socket.on('tirarDado', () => {
         const jugador = jugadores[socket.id];
         if (!jugador) return;
@@ -39,22 +42,23 @@ io.on('connection', (socket) => {
 
         jugador.posicion += totalDado;
 
+        // Si pasa por la salida (casilla 40 o más)
         if (jugador.posicion >= 40) {
             jugador.posicion -= 40;
             jugador.dinero += 200;
+            jugador.vueltas++; // <-- Le sumamos una vuelta completada
         }
 
         io.emit('resultadoDado', { nombre: jugador.nombre, dado: totalDado, dado1, dado2 });
         io.emit('actualizarJugadores', jugadores);
 
-        // NUEVO: Verificamos si la casilla está libre
-        if (jugador.posicion !== 0 && !propiedades[jugador.posicion]) {
-            // Le mandamos la opción de compra SOLO al jugador que tiró
+        // 3. SOLO le preguntamos si quiere comprar si ya dio al menos 1 vuelta (vueltas > 0)
+        if (jugador.posicion !== 0 && !propiedades[jugador.posicion] && jugador.vueltas > 0) {
             io.to(socket.id).emit('preguntarCompra', jugador.posicion);
         }
     });
 
-    // NUEVO: Cuando el jugador le da clic al botón de "Comprar"
+    // Cuando el jugador confirma la compra
     socket.on('comprarPropiedad', (datos) => {
         const jugador = jugadores[socket.id];
         if (jugador && jugador.dinero >= datos.precio) {
@@ -64,7 +68,7 @@ io.on('connection', (socket) => {
                 colorDueno: jugador.color
             };
             io.emit('actualizarJugadores', jugadores);
-            io.emit('actualizarPropiedades', propiedades); // Pintamos el tablero para todos
+            io.emit('actualizarPropiedades', propiedades); // Actualizamos colores en el tablero
         }
     });
 
