@@ -75,6 +75,14 @@
         <div id="lista-jugadores"></div>
         <div id="tablero"></div>
     </div>
+ 
+<!-- Ventanita de compra -->
+    <div id="modalCompra">
+        <h2 style="margin-top:0; color:#2c3e50;">🏡 ¡Propiedad Disponible!</h2>
+        <p id="textoCompra" style="font-size:20px; font-weight:bold;"></p>
+        <button id="btnComprar">Comprar</button>
+        <button id="btnIgnorar" onclick="document.getElementById('modalCompra').style.display='none'">Ignorar</button>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -184,6 +192,37 @@
                     ficha.className = 'ficha';
                     ficha.style.backgroundColor = j.color;
                     casillaDestino.appendChild(ficha);
+                }
+            }
+        });
+// 1. Mostrar la ventanita si caemos en terreno libre
+        socket.on('preguntarCompra', (casillaIndex) => {
+            // Buscamos los datos de la casilla (o usamos unos por defecto si aún no los has escrito todos)
+            const info = datosTablero[casillaIndex] || { nombre: "Propiedad " + casillaIndex, precio: 150 + (casillaIndex*10) };
+            
+            // Si no tiene precio (como Suerte o Caja de Comunidad), no hacemos nada
+            if (!info.precio || info.precio === 0) return;
+
+            document.getElementById('textoCompra').innerText = `¿Quieres comprar ${info.nombre} por $${info.precio}?`;
+            document.getElementById('modalCompra').style.display = 'block';
+            
+            // Configuramos el botón verde para enviar el pago
+            document.getElementById('btnComprar').onclick = function() {
+                socket.emit('comprarPropiedad', { casilla: casillaIndex, precio: info.precio });
+                document.getElementById('modalCompra').style.display = 'none'; // Cerramos la ventana
+            };
+        });
+
+        // 2. Pintar las propiedades compradas
+        socket.on('actualizarPropiedades', (propiedades) => {
+            // Limpiamos los colores viejos por si acaso
+            document.querySelectorAll('.casilla').forEach(c => c.style.boxShadow = 'none');
+            
+            for (let casillaIndex in propiedades) {
+                const casillaHTML = document.getElementById('casilla-' + casillaIndex);
+                if (casillaHTML) {
+                    // Le ponemos un borde grueso brillante con el color del jugador que la compró
+                    casillaHTML.style.boxShadow = `inset 0 0 0 6px ${propiedades[casillaIndex].colorDueno}`;
                 }
             }
         });
