@@ -17,17 +17,20 @@ let ordenJugadores = [];
 let turnoActual = 0; 
 let boteCentro = 0; 
 
-// NUEVO: Definición de los grupos de propiedades según tus casillas
+// Grupos de propiedades normales (Monopolio)
 const gruposColor = [
-    [1, 3],           // Grupo 1 (Café)
-    [6, 8, 9],        // Grupo 2 (Celeste)
-    [11, 13, 14],     // Grupo 3 (Fucsia/Morado)
-    [16, 18, 19],     // Grupo 4 (Naranja)
-    [21, 23, 24],     // Grupo 5 (Rojo)
-    [26, 27, 29],     // Grupo 6 (Amarillo)
-    [31, 32, 34],     // Grupo 7 (Verde)
-    [37, 39]          // Grupo 8 (Azul Oscuro)
+    [1, 3],           
+    [6, 8, 9],        
+    [11, 13, 14],     
+    [16, 18, 19],     
+    [21, 23, 24],     
+    [26, 27, 29],     
+    [31, 32, 34],     
+    [37, 39]          
 ];
+
+// Los 4 Volcanes (Casillas 5, 15, 25, 35)
+const volcanes = [5, 15, 25, 35];
 
 const cartasCPN = [
     { texto: "¡Error a favor en el sistema de la Cooperativa! Recibes $200.", accion: "ganar", valor: 200 },
@@ -176,17 +179,27 @@ io.on('connection', (socket) => {
                     let alquiler = 0;
 
                     if (jugador.posicion === 12 || jugador.posicion === 28) {
+                        // Oficinas CPN
                         let oficinasPropias = 0;
                         if (propiedades[12] && propiedades[12].dueno === propiedad.dueno) oficinasPropias++;
                         if (propiedades[28] && propiedades[28].dueno === propiedad.dueno) oficinasPropias++;
                         alquiler = totalDado * (oficinasPropias === 2 ? 10 : 4);
+                        
+                    } else if (volcanes.includes(jugador.posicion)) {
+                        // NUEVO: Lógica de los Volcanes (5, 15, 25, 35)
+                        let volcanesPropios = 0;
+                        volcanes.forEach(idx => {
+                            if (propiedades[idx] && propiedades[idx].dueno === propiedad.dueno) volcanesPropios++;
+                        });
+                        alquiler = volcanesPropios * 50; // 1=$50, 2=$100, 3=$150, 4=$200
+                        
                     } else {
+                        // Propiedades Normales
                         if (propiedad.hotel) {
                             alquiler = propiedad.rentas[5];
                         } else if (propiedad.casas > 0) {
                             alquiler = propiedad.rentas[propiedad.casas];
                         } else {
-                            // NUEVO: Verificación de grupo completo (Monopolio)
                             let tieneMonopolio = false;
                             for (let grupo of gruposColor) {
                                 if (grupo.includes(jugador.posicion)) {
@@ -204,7 +217,11 @@ io.on('connection', (socket) => {
                     io.emit('pagoAlquiler', { pagador: jugador.nombre, cobrador: jugadores[propiedad.dueno] ? jugadores[propiedad.dueno].nombre : 'el banco', monto: alquiler });
                     io.emit('actualizarJugadores', jugadores);
                 } else {
-                    if (!propiedad.hotel && !jugador.yaConstruyo && jugador.posicion !== 12 && jugador.posicion !== 28) { 
+                    // Cae en su propiedad. Verificamos que NO sea oficina NI volcán antes de ofrecer construir.
+                    if (!propiedad.hotel && !jugador.yaConstruyo && 
+                        jugador.posicion !== 12 && jugador.posicion !== 28 && 
+                        !volcanes.includes(jugador.posicion)) { 
+                        
                         io.to(socket.id).emit('preguntarConstruccion', jugador.posicion); 
                     }
                 }
@@ -233,7 +250,9 @@ io.on('connection', (socket) => {
 
     socket.on('comprarCasa', (casillaIndex) => {
         casillaIndex = parseInt(casillaIndex); 
-        if (casillaIndex === 12 || casillaIndex === 28) return; 
+        
+        // REGLA: Bloqueo estricto para Oficinas CPN y Volcanes
+        if (casillaIndex === 12 || casillaIndex === 28 || volcanes.includes(casillaIndex)) return; 
 
         const jugador = jugadores[socket.id];
         const propiedad = propiedades[casillaIndex];
