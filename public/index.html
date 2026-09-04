@@ -167,7 +167,7 @@
                     <div class="precio">${info.precio > 0 ? '$' + info.precio : ''}</div>
                 `;
                 
-                // Clic para comprar casas
+               // Clic para comprar casas
                 casilla.onclick = () => {
                     if (confirm(`¿Quieres intentar construir en ${info.nombre}?\n(Cuesta la mitad de su precio original)`)) {
                         socket.emit('comprarCasa', i);
@@ -258,6 +258,15 @@
 
         socket.on('pagoAlquiler', (datos) => {
             alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} de alquiler a ${datos.cobrador}`);
+        });
+        socket.on('preguntarConstruccion', (casillaIndex) => {
+            const info = datosTablero[casillaIndex];
+            const costo = Math.floor(info.precio * 0.5);
+            
+            // Aparecerá una alerta nativa preguntando si deseas construir 1 casa al caer ahí
+            if (confirm(`¡Caíste de nuevo en ${info.nombre}!\n¿Quieres construir una casa/hotel por $${costo}?`)) {
+                socket.emit('comprarCasa', casillaIndex);
+            }
         });
     </script>
 </body>
