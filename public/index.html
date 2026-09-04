@@ -90,46 +90,46 @@
 
         // Base de datos de nuestras casillas (Aquí pones los nombres y los links de tus imágenes)
         const datosTablero = [
-            { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png" },
-            { nombre: "Parque Nacional Cajas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png" },
+            { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png"},
+            { nombre: "Parque Nacional Cajas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png",rentas: [2, 10, 30, 90, 160, 250] },
             { nombre: "Cofre CPN", precio: 0, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
-            { nombre: "Complejo Turistico Las Cochas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png" },
+            { nombre: "Complejo Turistico Las Cochas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png",rentas: [4, 20, 60, 180, 320, 450]  },
             { nombre: "Impuestos", precio: 200, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" },
             { nombre: "Volcan Sangay", precio: 200, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" },
-            { nombre: "Ruinas de Ingapirca", precio: 100, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" },
+            { nombre: "Ruinas de Ingapirca", precio: 100, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png",rentas: [6, 30, 90, 270, 400, 550]  },
             { nombre: "Canales de Atencion", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" },
-            { nombre: "Reserva El Angel", precio: 100, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png" },
-            { nombre: "Nariz del Diablo", precio: 120, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png" },
+            { nombre: "Reserva El Angel", precio: 100, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png",rentas: [6, 30, 90, 270, 400, 550]  },
+            { nombre: "Nariz del Diablo", precio: 120, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png",rentas: [8, 40, 100, 300, 450, 600]  },
             { nombre: "La Carcel", precio: 0, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
-            { nombre: "Archipielago de Jambeli", precio: 140, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png" },
+            { nombre: "Archipielago de Jambeli", precio: 140, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png" ,rentas: [10, 50, 150, 450, 625, 750] },
             { nombre: "Matriz CPN", precio: 150, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" },
-            { nombre: "Las Peñas", precio: 140, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" },
-            { nombre: "Isla Santa Cruz", precio: 160, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" },
+            { nombre: "Las Peñas", precio: 140, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" ,rentas: [10, 50, 150, 450, 625, 750]},
+            { nombre: "Isla Santa Cruz", precio: 160, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" ,rentas: [12, 60, 180, 500, 700, 900]},
             { nombre: "Volcan Reventador", precio: 200, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" },
-            { nombre: "Malecon 2000", precio: 180, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png" },
+            { nombre: "Malecon 2000", precio: 180, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png" ,rentas: [14, 70, 200, 550, 750, 950]},
             { nombre: "Cofre CPN", precio: 0, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png" },
-            { nombre: "Lago San Pablo", precio: 180, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
-            { nombre: "Basilica del Cisne", precio: 200, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
+            { nombre: "Lago San Pablo", precio: 180, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png",rentas: [14, 70, 200, 550, 750, 950] },
+            { nombre: "Basilica del Cisne", precio: 200, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png",rentas: [16, 80, 220, 600, 800, 1000] },
             { nombre: "Parada Libre", precio: 0, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png" },
-            { nombre: "Playas del Salto", precio: 220, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" },
+            { nombre: "Playas del Salto", precio: 220, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png",rentas: [18, 90, 250, 700, 875, 1050] },
             { nombre: "Canales de Atencion", precio: 0, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" },
-            { nombre: "Puerto Lopez", precio: 220, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" },
-            { nombre: "Puerto Masahualli", precio: 240, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" },
+            { nombre: "Puerto Lopez", precio: 220, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png",rentas: [18, 90, 250, 700, 875, 1050] },
+            { nombre: "Puerto Masahualli", precio: 240, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png",rentas: [20, 100, 300, 750, 925, 1100] },
             { nombre: "Volcan Cotopaxi", precio: 200, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png" },
-            { nombre: "Parque Nacional Yasuni", precio: 260, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png" },
-            { nombre: "Parque Real", precio: 260, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
+            { nombre: "Parque Nacional Yasuni", precio: 260, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png" ,rentas: [22, 110, 330, 800, 975, 1150] },
+            { nombre: "Parque Real", precio: 260, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" ,rentas: [22, 110, 330, 800, 975, 1150]},
             { nombre: "CPN Cuartel modelo", precio: 150, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png" },
-            { nombre: "Mitad del Mundo", precio: 280, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" },
+            { nombre: "Mitad del Mundo", precio: 280, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" ,rentas: [24, 120, 360, 850, 1025, 1200]},
             { nombre: "¡A la carcel!", precio: 0, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" },
-            { nombre: "Salinas", precio: 300, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" },
-            { nombre: "Parque Zaracay", precio: 300, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" },
+            { nombre: "Salinas", precio: 300, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" ,rentas: [26, 130, 390, 900, 1100, 1275]},
+            { nombre: "Parque Zaracay", precio: 300, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" ,rentas: [26, 130, 390, 900, 1100, 1275]},
            { nombre: "Cofre CPN", precio: 0, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png" },
-            { nombre: "Cuyabeno", precio: 320, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
+            { nombre: "Cuyabeno", precio: 320, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" ,rentas: [20, 150, 450, 1000, 1200, 1400]},
             { nombre: "Volcan Tungurahua", precio: 200, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/2231/2231649.png" },
             { nombre: "Canales de atencion", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" },
-            { nombre: "Baños de Agua Santa", precio: 350, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" },
+            { nombre: "Baños de Agua Santa", precio: 350, color: "#bdc3c7", imagen: "https://cdn-icons-png.flaticon.com/512/2808/2808796.png" ,rentas: [35, 175, 500, 1100, 1300, 1500]},
             { nombre: "Impuestos", precio: 0, color: "#87ceeb", imagen: "https://cdn-icons-png.flaticon.com/512/2558/2558012.png" },
-            { nombre: "Rio Bombuscara", precio: 400, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" }
+            { nombre: "Rio Bombuscara", precio: 400, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" ,rentas: [50, 200, 600, 1600, 1700, 2000]}
         ];
 
        function crearTablero() {
@@ -206,10 +206,16 @@
             document.getElementById('textoCompra').innerText = `¿Quieres comprar ${info.nombre} por $${info.precio}?`;
             document.getElementById('modalCompra').style.display = 'block';
             
+            
             // Configuramos el botón verde para enviar el pago
             document.getElementById('btnComprar').onclick = function() {
-                socket.emit('comprarPropiedad', { casilla: casillaIndex, precio: info.precio });
-                document.getElementById('modalCompra').style.display = 'none'; // Cerramos la ventana
+                socket.emit('comprarPropiedad', { 
+                    casilla: casillaIndex, 
+                    precio: info.precio,
+                    // Enviamos tus rentas personalizadas. Si olvidas ponerlas en alguna, usa una fórmula de respaldo.
+                    rentas: info.rentas || [10, 20, 50, 100, 150, 200] 
+                });
+                document.getElementById('modalCompra').style.display = 'none'; 
             };
         });
 
