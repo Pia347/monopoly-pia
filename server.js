@@ -16,22 +16,17 @@ let colorIndex = 0;
 let ordenJugadores = []; 
 let turnoActual = 0; 
 
+// NUEVO: El pozo del centro de la mesa
+let boteCentro = 0; 
+
 io.on('connection', (socket) => {
     console.log('Nuevo dispositivo: ' + socket.id);
 
     socket.on('unirseAlJuego', (nombre) => {
         jugadores[socket.id] = {
-            id: socket.id,
-            nombre: nombre,
-            dinero: 1500,
-            posicion: 0,
+            id: socket.id, nombre: nombre, dinero: 1500, posicion: 0, 
             color: colores[colorIndex % colores.length],
-            vueltas: 0,
-            yaConstruyo: false,
-            yaTiro: false,
-            // NUEVO: Variables para la cárcel
-            enCarcel: false,
-            turnosCarcel: 0 
+            vueltas: 0, yaConstruyo: false, yaTiro: false, enCarcel: false, turnosCarcel: 0 
         };
         colorIndex++;
         ordenJugadores.push(socket.id); 
@@ -39,19 +34,23 @@ io.on('connection', (socket) => {
         io.emit('actualizarJugadores', jugadores);
         io.emit('actualizarPropiedades', propiedades);
         io.emit('actualizarTurno', ordenJugadores[turnoActual]);
+        io.emit('actualizarBote', boteCentro); // Mostramos el bote a los nuevos
     });
 
-    // NUEVA FUNCIÓN: Pagar Fianza ANTES de tirar
     socket.on('pagarFianza', () => {
         if (ordenJugadores[turnoActual] !== socket.id) return;
         const jugador = jugadores[socket.id];
         
         if (jugador && jugador.enCarcel && jugador.dinero >= 50 && !jugador.yaTiro) {
             jugador.dinero -= 50;
+            boteCentro += 50; // El dinero va al centro
+            
             jugador.enCarcel = false;
             jugador.turnosCarcel = 0;
-            io.emit('alertaGlobal', `💸 ${jugador.nombre} pagó $50 de fianza y ya es libre.`);
+            
+            io.emit('alertaGlobal', `💸 ${jugador.nombre} pagó $50 al centro de la mesa por su fianza.`);
             io.emit('actualizarJugadores', jugadores);
+            io.emit('actualizarBote', boteCentro);
         }
     });
 
@@ -69,29 +68,27 @@ io.on('connection', (socket) => {
 
         let seMovio = false;
 
-        // LÓGICA DE LA CÁRCEL
         if (jugador.enCarcel) {
             if (dado1 === dado2) {
-                jugador.enCarcel = false;
-                jugador.turnosCarcel = 0;
-                jugador.posicion += totalDado;
-                seMovio = true;
-                io.emit('alertaGlobal', `🎲 ¡${jugador.nombre} sacó dobles (${dado1}-${dado2}) y escapa de la cárcel!`);
+                jugador.enCarcel = false; jugador.turnosCarcel = 0;
+                jugador.posicion += totalDado; seMovio = true;
+                io.emit('alertaGlobal', `🎲 ¡${jugador.nombre} sacó dobles y escapa de la cárcel!`);
             } else {
                 jugador.turnosCarcel++;
                 if (jugador.turnosCarcel >= 3) {
-                    // Al 3er turno se le cobra obligatorio y sale
                     jugador.dinero -= 50;
-                    jugador.enCarcel = false;
-                    jugador.turnosCarcel = 0;
-                    jugador.posicion += totalDado;
-                    seMovio = true;
-                    io.emit('alertaGlobal', `👮 ${jugador.nombre} pagó $50 obligatorios por límite de turnos y sale de la cárcel.`);
+                    boteCentro += 50; // Multa obligatoria al centro
+                    
+                    jugador.enCarcel = false; jugador.turnosCarcel = 0;
+                    jugador.posicion += totalDado; seMovio = true;
+                    
+                    io.emit('alertaGlobal', `👮 ${jugador.nombre} pagó $50 obligatorios al centro y sale libre.`);
+                    io.emit('actualizarBote', boteCentro);
                 } else {
                     io.emit('alertaGlobal', `🔒 ${jugador.nombre} sacó ${dado1}-${dado2} y sigue en la cárcel.`);
                     io.emit('resultadoDado', { nombre: jugador.nombre, dado: totalDado, dado1, dado2 });
                     io.emit('actualizarJugadores', jugadores);
-                    return; // Termina su turno sin moverse
+                    return; 
                 }
             }
         } else {
@@ -99,7 +96,6 @@ io.on('connection', (socket) => {
             seMovio = true;
         }
 
-        // Si se movió (normal o escapó)
         if (seMovio) {
             if (jugador.posicion >= 40) {
                 jugador.posicion -= 40;
@@ -107,21 +103,32 @@ io.on('connection', (socket) => {
                 jugador.vueltas++;
             }
 
-            // REGLA: Casilla 30 te manda directo a la cárcel
             if (jugador.posicion === 30) {
                 jugador.posicion = 10;
                 jugador.enCarcel = true;
                 jugador.turnosCarcel = 0;
                 io.emit('alertaGlobal', `🚓 ¡${jugador.nombre} ha caído en la Policía y se va a la CÁRCEL!`);
-                seMovio = false; // Ya no cobra rentas ni compra nada
+                seMovio = false; 
             }
         }
 
         io.emit('resultadoDado', { nombre: jugador.nombre, dado: totalDado, dado1, dado2 });
         io.emit('actualizarJugadores', jugadores);
 
-        // Lógica de casillas (Solo si no está en la cárcel ni en "solo visitas")
         if (seMovio && jugador.posicion !== 0 && jugador.posicion !== 10 && jugador.posicion !== 30) {
+            
+            // NUEVO: Casilla 20 es Parada Libre, se lleva el bote
+            if (jugador.posicion === 20) {
+                if (boteCentro > 0) {
+                    io.emit('alertaGlobal', `🎉 ¡JACKPOT! ${jugador.nombre} cayó en Parada Libre y se llevó $${boteCentro} del centro.`);
+                    jugador.dinero += boteCentro;
+                    boteCentro = 0;
+                    io.emit('actualizarBote', boteCentro);
+                    io.emit('actualizarJugadores', jugadores);
+                }
+                return; // Termina su lógica de casilla aquí
+            }
+
             const propiedad = propiedades[jugador.posicion];
             if (propiedad) {
                 if (propiedad.dueno !== socket.id) {
@@ -129,11 +136,7 @@ io.on('connection', (socket) => {
                     jugador.dinero -= alquiler;
                     if (jugadores[propiedad.dueno]) jugadores[propiedad.dueno].dinero += alquiler;
                     
-                    io.emit('pagoAlquiler', {
-                        pagador: jugador.nombre,
-                        cobrador: jugadores[propiedad.dueno] ? jugadores[propiedad.dueno].nombre : 'el banco',
-                        monto: alquiler
-                    });
+                    io.emit('pagoAlquiler', { pagador: jugador.nombre, cobrador: jugadores[propiedad.dueno] ? jugadores[propiedad.dueno].nombre : 'el banco', monto: alquiler });
                     io.emit('actualizarJugadores', jugadores);
                 } else {
                     if (!propiedad.hotel && !jugador.yaConstruyo) {
@@ -150,9 +153,7 @@ io.on('connection', (socket) => {
         const jugador = jugadores[socket.id];
         if (jugador && jugador.dinero >= datos.precio) {
             jugador.dinero -= datos.precio;
-            propiedades[datos.casilla] = {
-                dueno: socket.id, colorDueno: jugador.color, precioBase: datos.precio, rentas: datos.rentas, casas: 0, hotel: false
-            };
+            propiedades[datos.casilla] = { dueno: socket.id, colorDueno: jugador.color, precioBase: datos.precio, rentas: datos.rentas, casas: 0, hotel: false };
             jugador.yaConstruyo = true; 
             io.emit('actualizarJugadores', jugadores);
             io.emit('actualizarPropiedades', propiedades);
@@ -166,11 +167,8 @@ io.on('connection', (socket) => {
         if (propiedad && propiedad.dueno === socket.id && jugador.posicion === casillaIndex && !jugador.yaConstruyo) {
             const costoMejora = Math.floor(propiedad.precioBase * 0.5); 
             if (jugador.dinero >= costoMejora) {
-                if (propiedad.casas < 4 && !propiedad.hotel) {
-                    propiedad.casas++; jugador.dinero -= costoMejora;
-                } else if (propiedad.casas === 4 && !propiedad.hotel) {
-                    propiedad.casas = 0; propiedad.hotel = true; jugador.dinero -= costoMejora;
-                }
+                if (propiedad.casas < 4 && !propiedad.hotel) { propiedad.casas++; jugador.dinero -= costoMejora; } 
+                else if (propiedad.casas === 4 && !propiedad.hotel) { propiedad.casas = 0; propiedad.hotel = true; jugador.dinero -= costoMejora; }
                 jugador.yaConstruyo = true; 
                 io.emit('actualizarJugadores', jugadores);
                 io.emit('actualizarPropiedades', propiedades);
@@ -181,10 +179,7 @@ io.on('connection', (socket) => {
     socket.on('terminarTurno', () => {
         if (ordenJugadores[turnoActual] === socket.id) {
             const jugador = jugadores[socket.id];
-            if (jugador) {
-                jugador.yaTiro = false;
-                jugador.yaConstruyo = false;
-            }
+            if (jugador) { jugador.yaTiro = false; jugador.yaConstruyo = false; }
             turnoActual++;
             if (turnoActual >= ordenJugadores.length) turnoActual = 0;
             io.emit('actualizarTurno', ordenJugadores[turnoActual]);
@@ -196,9 +191,7 @@ io.on('connection', (socket) => {
         if (index !== -1) {
             ordenJugadores.splice(index, 1);
             if (turnoActual >= ordenJugadores.length) turnoActual = 0;
-            if (ordenJugadores.length > 0) {
-                io.emit('actualizarTurno', ordenJugadores[turnoActual]);
-            }
+            if (ordenJugadores.length > 0) io.emit('actualizarTurno', ordenJugadores[turnoActual]);
         }
         delete jugadores[socket.id];
         io.emit('actualizarJugadores', jugadores);
