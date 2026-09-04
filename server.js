@@ -93,6 +93,12 @@ io.on('connection', (socket) => {
                 casas: 0,
                 hotel: false
             };
+            
+            // 🔥 NUEVO CANDADO ESTRICTO: 
+            // Como acabas de comprar el terreno, cerramos el candado de este turno.
+            // Así es imposible que construyas una casa hoy.
+            jugador.yaConstruyo = true; 
+            
             io.emit('actualizarJugadores', jugadores);
             io.emit('actualizarPropiedades', propiedades);
         }
