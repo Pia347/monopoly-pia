@@ -334,6 +334,12 @@ tablero.innerHTML = `
         socket.on('pagoAlquiler', (datos) => {
             alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} de alquiler a ${datos.cobrador}`);
         });
+        socket.on('actualizarBote', (monto) => {
+            const textoBote = document.getElementById('textoBote');
+            if(textoBote) {
+                textoBote.innerText = `Bote: $${monto}`;
+            }
+        });
     </script>
 </body>
 </html>
