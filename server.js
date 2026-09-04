@@ -17,7 +17,7 @@ let ordenJugadores = [];
 let turnoActual = 0; 
 let boteCentro = 0; 
 
-// Baraja 1: Cofre CPN (Casillas 2, 17, 33)
+// Baraja 1: Cofre CPN
 const cartasCPN = [
     { texto: "¡Error a favor en el sistema de la Cooperativa! Recibes $200.", accion: "ganar", valor: 200 },
     { texto: "Pago de impuestos municipales en Santo Domingo. Paga $50 al centro.", accion: "pagar", valor: 50 },
@@ -29,7 +29,7 @@ const cartasCPN = [
     { texto: "Avanza directamente hasta la SALIDA y cobra $200.", accion: "salida", valor: 0 }
 ];
 
-// Baraja 2: Canales de Atención (Casillas 7, 22, 36)
+// Baraja 2: Canales de Atención
 const cartasCanales = [
     { texto: "Haces un pago rápido por la App Móvil y ganas un sorteo. Recibes $100.", accion: "ganar", valor: 100 },
     { texto: "Pides un duplicado de tarjeta en Ventanilla. Paga $20 al centro.", accion: "pagar", valor: 20 },
@@ -132,6 +132,7 @@ io.on('connection', (socket) => {
 
         if (seMovio && jugador.posicion !== 0 && jugador.posicion !== 10 && jugador.posicion !== 30) {
             
+            // Lógica: PARADA LIBRE (Casilla 20)
             if (jugador.posicion === 20) {
                 if (boteCentro > 0) {
                     io.emit('alertaGlobal', `🎉 ¡JACKPOT! ${jugador.nombre} cayó en Parada Libre y se llevó $${boteCentro} del centro.`);
@@ -139,6 +140,16 @@ io.on('connection', (socket) => {
                     io.emit('actualizarBote', boteCentro);
                     io.emit('actualizarJugadores', jugadores);
                 }
+                return; 
+            }
+
+            // NUEVO: Lógica de Impuestos (Casillas 4 y 38)
+            if (jugador.posicion === 4 || jugador.posicion === 38) {
+                jugador.dinero -= 200;
+                boteCentro += 200;
+                io.emit('alertaGlobal', `🧾 ¡Ouch! ${jugador.nombre} cayó en Impuestos y pagó $200 al centro de la mesa.`);
+                io.emit('actualizarBote', boteCentro);
+                io.emit('actualizarJugadores', jugadores);
                 return; 
             }
 
@@ -177,7 +188,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // Función auxiliar para no repetir código al aplicar las cartas
     function aplicarCarta(carta, jugador) {
         if (carta.accion === "ganar") {
             jugador.dinero += carta.valor;
