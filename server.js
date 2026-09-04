@@ -23,7 +23,8 @@ io.on('connection', (socket) => {
             dinero: 1500,
             posicion: 0,
             color: colores[colorIndex % colores.length],
-            vueltas: 0
+            vueltas: 0,
+            yaConstruyo: false // <-- NUEVO: El candado inicia cerrado
         };
         colorIndex++;
         io.emit('actualizarJugadores', jugadores);
@@ -33,6 +34,9 @@ io.on('connection', (socket) => {
     socket.on('tirarDado', () => {
         const jugador = jugadores[socket.id];
         if (!jugador) return;
+
+        // NUEVO: Cada vez que tira el dado, le abrimos el candado por si cae en su propiedad
+        jugador.yaConstruyo = false; 
 
         const dado1 = Math.floor(Math.random() * 6) + 1;
         const dado2 = Math.floor(Math.random() * 6) + 1;
@@ -54,7 +58,7 @@ io.on('connection', (socket) => {
             
             if (propiedad) {
                 if (propiedad.dueno !== socket.id) {
-                    // Cae en propiedad ajena = Paga alquiler
+                    // Paga alquiler
                     let alquiler = propiedad.hotel ? propiedad.rentas[5] : propiedad.rentas[propiedad.casas];
                     jugador.dinero -= alquiler;
                     if (jugadores[propiedad.dueno]) jugadores[propiedad.dueno].dinero += alquiler;
@@ -66,8 +70,8 @@ io.on('connection', (socket) => {
                     });
                     io.emit('actualizarJugadores', jugadores);
                 } else {
-                    // Cae en SU PROPIA propiedad = Le ofrecemos construir (si no tiene hotel)
-                    if (!propiedad.hotel) {
+                    // Cae en su propiedad, y si NO ha construido este turno, le preguntamos
+                    if (!propiedad.hotel && !jugador.yaConstruyo) {
                         io.to(socket.id).emit('preguntarConstruccion', jugador.posicion);
                     }
                 }
@@ -98,8 +102,8 @@ io.on('connection', (socket) => {
         const jugador = jugadores[socket.id];
         const propiedad = propiedades[casillaIndex];
         
-        // REGLA ESTRICTA: Solo puede construir si es el dueño Y su ficha está en esa casilla
-        if (propiedad && propiedad.dueno === socket.id && jugador.posicion === casillaIndex) {
+        // REGLA ESTRICTA: Solo si es dueño, está parado ahí, Y NO HA CONSTRUIDO en este turno
+        if (propiedad && propiedad.dueno === socket.id && jugador.posicion === casillaIndex && !jugador.yaConstruyo) {
             const costoMejora = Math.floor(propiedad.precioBase * 0.5); 
             
             if (jugador.dinero >= costoMejora) {
@@ -111,6 +115,10 @@ io.on('connection', (socket) => {
                     propiedad.hotel = true;
                     jugador.dinero -= costoMejora;
                 }
+                
+                // NUEVO: Bloqueamos el candado para que no pueda volver a construir hasta el próximo turno
+                jugador.yaConstruyo = true; 
+                
                 io.emit('actualizarJugadores', jugadores);
                 io.emit('actualizarPropiedades', propiedades);
             }
