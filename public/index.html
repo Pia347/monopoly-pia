@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly - Fase 5</title>
+    <title>Monopoly - Turnos Estrictos</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
         .panel { background: white; max-width: 900px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         input, button { padding: 10px; margin: 5px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
         button { background: #00796b; color: white; cursor: pointer; border: none; font-weight: bold; }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
         
         #juego { display: none; }
         .jugador-card { display: inline-block; padding: 10px; margin: 5px; border-radius: 8px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black;}
@@ -37,7 +38,6 @@
             border-radius: 4px;
             overflow: hidden;
             transform-origin: center center; 
-            cursor: pointer; /* Hace que el cursor cambie a la manito para indicar que puedes darle clic */
         }
 
         .color-bar { height: 20px; width: 100%; border-bottom: 2px solid #333; }
@@ -58,13 +58,13 @@
         .imagen-casilla { width: 25px; height: 25px; object-fit: contain; margin: 2px auto 0 auto; display: block; }
         
         /* Fichas */
-        .ficha { width: 12px; height: 12px; border-radius: 50%; position: absolute; border: 1px solid white; box-shadow: 0 0 3px black; z-index: 10; }
+        .ficha { width: 12px; height: 12px; border-radius: 50%; position: absolute; border: 1px solid white; box-shadow: 0 0 3px black; z-index: 10; transition: all 0.3s ease; }
         .ficha:nth-child(1) { top: 25px; left: 5px; }
         .ficha:nth-child(2) { top: 25px; right: 5px; }
         .ficha:nth-child(3) { bottom: 20px; left: 5px; }
         .ficha:nth-child(4) { bottom: 20px; right: 5px; }
 
-        /* Pop-up de compra de propiedades corregido */
+        /* Pop-up de compra de propiedades */
         #modalCompra {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 25px; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.6);
@@ -83,7 +83,9 @@
     </div>
 
     <div id="juego" class="panel">
-        <button onclick="tirar()">🎲 Tirar Dados</button>
+        <h3 id="mensajeTurno" style="color: #2980b9; margin-top: 0;">Esperando jugadores...</h3>
+        <button id="btnTirar" onclick="tirar()" style="display: none;">🎲 Tirar Dados</button>
+        <button id="btnPasar" onclick="pasarTurno()" style="background: #e67e22; display: none;">⏭️ Terminar Turno</button>
         <div id="lista-jugadores"></div>
         <div id="tablero"></div>
     </div>
@@ -100,7 +102,7 @@
     <script>
         const socket = io();
 
-        // AQUÍ VAN TUS DATOS PERSONALIZADOS (Puedes pegar los tuyos si tenías más de 8)
+        // REEMPLAZA ESTO CON TU LISTA DE 40 CASILLAS
         const datosTablero = [
             { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png"},
             { nombre: "Parque Nacional Cajas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png",rentas: [2, 10, 30, 90, 160, 250] },
@@ -144,6 +146,7 @@
             { nombre: "Rio Bombuscara", precio: 400, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/3074/3074528.png" ,rentas: [50, 200, 600, 1600, 1700, 2000]}
         ];
 
+
         function crearTablero() {
             const tablero = document.getElementById('tablero');
             tablero.innerHTML = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:white; font-size:30px; font-weight:bold;">MONOPOLY</div>';
@@ -167,13 +170,6 @@
                     <div class="precio">${info.precio > 0 ? '$' + info.precio : ''}</div>
                 `;
                 
-               // Clic para comprar casas
-                casilla.onclick = () => {
-                    if (confirm(`¿Quieres intentar construir en ${info.nombre}?\n(Cuesta la mitad de su precio original)`)) {
-                        socket.emit('comprarCasa', i);
-                    }
-                };
-
                 tablero.appendChild(casilla);
             }
         }
@@ -187,8 +183,44 @@
             document.getElementById('juego').style.display = 'block';
         }
 
-        function tirar() { socket.emit('tirarDado'); }
+        // --- SISTEMA DE TURNOS Y BOTONES ---
+        let miTurno = false;
 
+        socket.on('actualizarTurno', (idTurno) => {
+            miTurno = (socket.id === idTurno);
+            
+            const btnTirar = document.getElementById('btnTirar');
+            const btnPasar = document.getElementById('btnPasar');
+            const mensaje = document.getElementById('mensajeTurno');
+
+            if (miTurno) {
+                mensaje.innerText = "¡Es tu turno!";
+                btnTirar.style.display = 'inline-block';
+                btnTirar.disabled = false; // Habilita el dado
+                btnTirar.style.opacity = '1';
+                btnPasar.style.display = 'inline-block';
+            } else {
+                mensaje.innerText = "Turno de otro jugador...";
+                btnTirar.style.display = 'none';
+                btnPasar.style.display = 'none';
+            }
+        });
+
+        function tirar() { 
+            if(miTurno) {
+                socket.emit('tirarDado'); 
+                document.getElementById('btnTirar').disabled = true;
+                document.getElementById('btnTirar').style.opacity = '0.5';
+            }
+        }
+
+        function pasarTurno() {
+            if(miTurno) {
+                socket.emit('terminarTurno');
+            }
+        }
+
+        // --- PINTAR JUGADORES ---
         socket.on('actualizarJugadores', (jugadores) => {
             const contenedor = document.getElementById('lista-jugadores');
             contenedor.innerHTML = ''; 
@@ -212,6 +244,7 @@
             }
         });
 
+        // --- COMPRAS Y ALQUILERES ---
         socket.on('preguntarCompra', (casillaIndex) => {
             const info = datosTablero[casillaIndex] || { nombre: "Propiedad " + casillaIndex, precio: 150 + (casillaIndex*10), rentas: [10, 20, 50, 100, 150, 200] };
             if (!info.precio || info.precio === 0) return;
@@ -227,6 +260,15 @@
                 });
                 document.getElementById('modalCompra').style.display = 'none'; 
             };
+        });
+
+        socket.on('preguntarConstruccion', (casillaIndex) => {
+            const info = datosTablero[casillaIndex];
+            const costo = Math.floor(info.precio * 0.5);
+            
+            if (confirm(`¡Caíste de nuevo en ${info.nombre}!\n¿Quieres construir una casa/hotel por $${costo}?`)) {
+                socket.emit('comprarCasa', casillaIndex);
+            }
         });
 
         socket.on('actualizarPropiedades', (propiedades) => {
@@ -258,15 +300,6 @@
 
         socket.on('pagoAlquiler', (datos) => {
             alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} de alquiler a ${datos.cobrador}`);
-        });
-        socket.on('preguntarConstruccion', (casillaIndex) => {
-            const info = datosTablero[casillaIndex];
-            const costo = Math.floor(info.precio * 0.5);
-            
-            // Aparecerá una alerta nativa preguntando si deseas construir 1 casa al caer ahí
-            if (confirm(`¡Caíste de nuevo en ${info.nombre}!\n¿Quieres construir una casa/hotel por $${costo}?`)) {
-                socket.emit('comprarCasa', casillaIndex);
-            }
         });
     </script>
 </body>
