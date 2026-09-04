@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly - Turnos Estrictos</title>
+    <title>Monopoly - Fase 6 (Cárcel y Turnos)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
         .panel { background: white; max-width: 900px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -84,8 +84,12 @@
 
     <div id="juego" class="panel">
         <h3 id="mensajeTurno" style="color: #2980b9; margin-top: 0;">Esperando jugadores...</h3>
+        
+        <!-- Botones de Acción (El de Fianza es nuevo) -->
+        <button id="btnFianza" onclick="pagarFianza()" style="background: #c0392b; display: none;">💸 Pagar Fianza ($50)</button>
         <button id="btnTirar" onclick="tirar()" style="display: none;">🎲 Tirar Dados</button>
         <button id="btnPasar" onclick="pasarTurno()" style="background: #e67e22; display: none;">⏭️ Terminar Turno</button>
+        
         <div id="lista-jugadores"></div>
         <div id="tablero"></div>
     </div>
@@ -102,7 +106,7 @@
     <script>
         const socket = io();
 
-        // REEMPLAZA ESTO CON TU LISTA DE 40 CASILLAS
+          // REEMPLAZA ESTO CON TU LISTA DE 40 CASILLAS
         const datosTablero = [
             { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png"},
             { nombre: "Parque Nacional Cajas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png",rentas: [2, 10, 30, 90, 160, 250] },
@@ -147,12 +151,13 @@
         ];
 
 
+
         function crearTablero() {
             const tablero = document.getElementById('tablero');
             tablero.innerHTML = '<div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); color:white; font-size:30px; font-weight:bold;">MONOPOLY</div>';
 
             for(let i = 0; i < 40; i++) {
-                const info = datosTablero[i] || { nombre: "Propiedad " + i, precio: 150 + (i*10), color: "#f39c12", imagen: "", rentas: [10, 20, 50, 100, 150, 200] };
+                const info = datosTablero[i];
                 
                 const casilla = document.createElement('div');
                 casilla.className = 'casilla';
@@ -183,45 +188,19 @@
             document.getElementById('juego').style.display = 'block';
         }
 
-        // --- SISTEMA DE TURNOS Y BOTONES ---
+        // --- SISTEMA DE TURNOS Y ALERTAS ---
         let miTurno = false;
+        let estoyEnCarcel = false;
 
-        socket.on('actualizarTurno', (idTurno) => {
-            miTurno = (socket.id === idTurno);
-            
-            const btnTirar = document.getElementById('btnTirar');
-            const btnPasar = document.getElementById('btnPasar');
-            const mensaje = document.getElementById('mensajeTurno');
-
-            if (miTurno) {
-                mensaje.innerText = "¡Es tu turno!";
-                btnTirar.style.display = 'inline-block';
-                btnTirar.disabled = false; // Habilita el dado
-                btnTirar.style.opacity = '1';
-                btnPasar.style.display = 'inline-block';
-            } else {
-                mensaje.innerText = "Turno de otro jugador...";
-                btnTirar.style.display = 'none';
-                btnPasar.style.display = 'none';
-            }
+        socket.on('alertaGlobal', (mensaje) => {
+            alert(mensaje);
         });
 
-        function tirar() { 
-            if(miTurno) {
-                socket.emit('tirarDado'); 
-                document.getElementById('btnTirar').disabled = true;
-                document.getElementById('btnTirar').style.opacity = '0.5';
-            }
-        }
-
-        function pasarTurno() {
-            if(miTurno) {
-                socket.emit('terminarTurno');
-            }
-        }
-
-        // --- PINTAR JUGADORES ---
         socket.on('actualizarJugadores', (jugadores) => {
+            if (jugadores[socket.id]) {
+                estoyEnCarcel = jugadores[socket.id].enCarcel;
+            }
+            
             const contenedor = document.getElementById('lista-jugadores');
             contenedor.innerHTML = ''; 
             document.querySelectorAll('.ficha').forEach(f => f.remove());
@@ -244,10 +223,60 @@
             }
         });
 
+        socket.on('actualizarTurno', (idTurno) => {
+            miTurno = (socket.id === idTurno);
+            
+            const btnTirar = document.getElementById('btnTirar');
+            const btnPasar = document.getElementById('btnPasar');
+            const btnFianza = document.getElementById('btnFianza');
+            const mensaje = document.getElementById('mensajeTurno');
+
+            if (miTurno) {
+                mensaje.innerText = "¡Es tu turno!";
+                btnTirar.style.display = 'inline-block';
+                btnTirar.disabled = false;
+                btnTirar.style.opacity = '1';
+                btnPasar.style.display = 'inline-block';
+                
+                if (estoyEnCarcel) {
+                    btnFianza.style.display = 'inline-block';
+                } else {
+                    btnFianza.style.display = 'none';
+                }
+            } else {
+                mensaje.innerText = "Turno de otro jugador...";
+                btnTirar.style.display = 'none';
+                btnPasar.style.display = 'none';
+                btnFianza.style.display = 'none';
+            }
+        });
+
+        function pagarFianza() {
+            if(miTurno && estoyEnCarcel) {
+                socket.emit('pagarFianza');
+                document.getElementById('btnFianza').style.display = 'none';
+            }
+        }
+
+        function tirar() { 
+            if(miTurno) {
+                socket.emit('tirarDado'); 
+                document.getElementById('btnTirar').disabled = true;
+                document.getElementById('btnTirar').style.opacity = '0.5';
+                document.getElementById('btnFianza').style.display = 'none';
+            }
+        }
+
+        function pasarTurno() {
+            if(miTurno) {
+                socket.emit('terminarTurno');
+            }
+        }
+
         // --- COMPRAS Y ALQUILERES ---
         socket.on('preguntarCompra', (casillaIndex) => {
-            const info = datosTablero[casillaIndex] || { nombre: "Propiedad " + casillaIndex, precio: 150 + (casillaIndex*10), rentas: [10, 20, 50, 100, 150, 200] };
-            if (!info.precio || info.precio === 0) return;
+            const info = datosTablero[casillaIndex];
+            if (!info || !info.precio || info.precio === 0) return;
 
             document.getElementById('textoCompra').innerText = `¿Quieres comprar ${info.nombre} por $${info.precio}?`;
             document.getElementById('modalCompra').style.display = 'block';
