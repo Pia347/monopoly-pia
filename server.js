@@ -17,7 +17,18 @@ let ordenJugadores = [];
 let turnoActual = 0; 
 let boteCentro = 0; 
 
-// Baraja 1: Cofre CPN
+// NUEVO: Definición de los grupos de propiedades según tus casillas
+const gruposColor = [
+    [1, 3],           // Grupo 1 (Café)
+    [6, 8, 9],        // Grupo 2 (Celeste)
+    [11, 13, 14],     // Grupo 3 (Fucsia/Morado)
+    [16, 18, 19],     // Grupo 4 (Naranja)
+    [21, 23, 24],     // Grupo 5 (Rojo)
+    [26, 27, 29],     // Grupo 6 (Amarillo)
+    [31, 32, 34],     // Grupo 7 (Verde)
+    [37, 39]          // Grupo 8 (Azul Oscuro)
+];
+
 const cartasCPN = [
     { texto: "¡Error a favor en el sistema de la Cooperativa! Recibes $200.", accion: "ganar", valor: 200 },
     { texto: "Pago de impuestos municipales en Santo Domingo. Paga $50 al centro.", accion: "pagar", valor: 50 },
@@ -29,7 +40,6 @@ const cartasCPN = [
     { texto: "Avanza directamente hasta la SALIDA y cobra $200.", accion: "salida", valor: 0 }
 ];
 
-// Baraja 2: Canales de Atención
 const cartasCanales = [
     { texto: "Haces un pago rápido por la App Móvil y ganas un sorteo. Recibes $100.", accion: "ganar", valor: 100 },
     { texto: "Pides un duplicado de tarjeta en Ventanilla. Paga $20 al centro.", accion: "pagar", valor: 20 },
@@ -64,13 +74,10 @@ io.on('connection', (socket) => {
         const jugador = jugadores[socket.id];
         
         if (jugador && jugador.enCarcel && jugador.dinero >= 50 && !jugador.yaTiro) {
-            jugador.dinero -= 50;
-            boteCentro += 50; 
-            jugador.enCarcel = false;
-            jugador.turnosCarcel = 0;
+            jugador.dinero -= 50; boteCentro += 50; 
+            jugador.enCarcel = false; jugador.turnosCarcel = 0;
             io.emit('alertaGlobal', `💸 ${jugador.nombre} pagó $50 al centro de la mesa por su fianza.`);
-            io.emit('actualizarJugadores', jugadores);
-            io.emit('actualizarBote', boteCentro);
+            io.emit('actualizarJugadores', jugadores); io.emit('actualizarBote', boteCentro);
         }
     });
 
@@ -119,7 +126,6 @@ io.on('connection', (socket) => {
                 jugador.dinero += 200;
                 jugador.vueltas++;
             }
-
             if (jugador.posicion === 30) {
                 jugador.posicion = 10; jugador.enCarcel = true; jugador.turnosCarcel = 0;
                 io.emit('alertaGlobal', `🚓 ¡${jugador.nombre} ha caído en la Policía y se va a la CÁRCEL!`);
@@ -132,28 +138,22 @@ io.on('connection', (socket) => {
 
         if (seMovio && jugador.posicion !== 0 && jugador.posicion !== 10 && jugador.posicion !== 30) {
             
-            // Lógica: PARADA LIBRE (Casilla 20)
             if (jugador.posicion === 20) {
                 if (boteCentro > 0) {
                     io.emit('alertaGlobal', `🎉 ¡JACKPOT! ${jugador.nombre} cayó en Parada Libre y se llevó $${boteCentro} del centro.`);
                     jugador.dinero += boteCentro; boteCentro = 0;
-                    io.emit('actualizarBote', boteCentro);
-                    io.emit('actualizarJugadores', jugadores);
+                    io.emit('actualizarBote', boteCentro); io.emit('actualizarJugadores', jugadores);
                 }
                 return; 
             }
 
-            // NUEVO: Lógica de Impuestos (Casillas 4 y 38)
             if (jugador.posicion === 4 || jugador.posicion === 38) {
-                jugador.dinero -= 200;
-                boteCentro += 200;
-                io.emit('alertaGlobal', `🧾 ¡Ouch! ${jugador.nombre} cayó en Impuestos y pagó $200 al centro de la mesa.`);
-                io.emit('actualizarBote', boteCentro);
-                io.emit('actualizarJugadores', jugadores);
+                jugador.dinero -= 200; boteCentro += 200;
+                io.emit('alertaGlobal', `🧾 ¡Ouch! ${jugador.nombre} pagó $200 de Impuestos al centro de la mesa.`);
+                io.emit('actualizarBote', boteCentro); io.emit('actualizarJugadores', jugadores);
                 return; 
             }
 
-            // Lógica: COFRE CPN
             if (jugador.posicion === 2 || jugador.posicion === 17 || jugador.posicion === 33) {
                 const carta = cartasCPN[Math.floor(Math.random() * cartasCPN.length)];
                 aplicarCarta(carta, jugador);
@@ -162,7 +162,6 @@ io.on('connection', (socket) => {
                 return; 
             }
 
-            // Lógica: CANALES DE ATENCIÓN
             if (jugador.posicion === 7 || jugador.posicion === 22 || jugador.posicion === 36) {
                 const carta = cartasCanales[Math.floor(Math.random() * cartasCanales.length)];
                 aplicarCarta(carta, jugador);
@@ -174,13 +173,40 @@ io.on('connection', (socket) => {
             const propiedad = propiedades[jugador.posicion];
             if (propiedad) {
                 if (propiedad.dueno !== socket.id) {
-                    let alquiler = propiedad.hotel ? propiedad.rentas[5] : propiedad.rentas[propiedad.casas];
+                    let alquiler = 0;
+
+                    if (jugador.posicion === 12 || jugador.posicion === 28) {
+                        let oficinasPropias = 0;
+                        if (propiedades[12] && propiedades[12].dueno === propiedad.dueno) oficinasPropias++;
+                        if (propiedades[28] && propiedades[28].dueno === propiedad.dueno) oficinasPropias++;
+                        alquiler = totalDado * (oficinasPropias === 2 ? 10 : 4);
+                    } else {
+                        if (propiedad.hotel) {
+                            alquiler = propiedad.rentas[5];
+                        } else if (propiedad.casas > 0) {
+                            alquiler = propiedad.rentas[propiedad.casas];
+                        } else {
+                            // NUEVO: Verificación de grupo completo (Monopolio)
+                            let tieneMonopolio = false;
+                            for (let grupo of gruposColor) {
+                                if (grupo.includes(jugador.posicion)) {
+                                    tieneMonopolio = grupo.every(indice => propiedades[indice] && propiedades[indice].dueno === propiedad.dueno);
+                                    break;
+                                }
+                            }
+                            alquiler = propiedad.rentas[0];
+                            if (tieneMonopolio) alquiler *= 2;
+                        }
+                    }
+
                     jugador.dinero -= alquiler;
                     if (jugadores[propiedad.dueno]) jugadores[propiedad.dueno].dinero += alquiler;
                     io.emit('pagoAlquiler', { pagador: jugador.nombre, cobrador: jugadores[propiedad.dueno] ? jugadores[propiedad.dueno].nombre : 'el banco', monto: alquiler });
                     io.emit('actualizarJugadores', jugadores);
                 } else {
-                    if (!propiedad.hotel && !jugador.yaConstruyo) { io.to(socket.id).emit('preguntarConstruccion', jugador.posicion); }
+                    if (!propiedad.hotel && !jugador.yaConstruyo && jugador.posicion !== 12 && jugador.posicion !== 28) { 
+                        io.to(socket.id).emit('preguntarConstruccion', jugador.posicion); 
+                    }
                 }
             } else if (jugador.vueltas > 0) {
                 io.to(socket.id).emit('preguntarCompra', jugador.posicion);
@@ -189,21 +215,10 @@ io.on('connection', (socket) => {
     });
 
     function aplicarCarta(carta, jugador) {
-        if (carta.accion === "ganar") {
-            jugador.dinero += carta.valor;
-        } else if (carta.accion === "pagar") {
-            jugador.dinero -= carta.valor;
-            boteCentro += carta.valor;
-            io.emit('actualizarBote', boteCentro);
-        } else if (carta.accion === "carcel") {
-            jugador.posicion = 10;
-            jugador.enCarcel = true;
-            jugador.turnosCarcel = 0;
-        } else if (carta.accion === "salida") {
-            jugador.posicion = 0;
-            jugador.dinero += 200;
-            jugador.vueltas++;
-        }
+        if (carta.accion === "ganar") { jugador.dinero += carta.valor; } 
+        else if (carta.accion === "pagar") { jugador.dinero -= carta.valor; boteCentro += carta.valor; io.emit('actualizarBote', boteCentro); } 
+        else if (carta.accion === "carcel") { jugador.posicion = 10; jugador.enCarcel = true; jugador.turnosCarcel = 0; } 
+        else if (carta.accion === "salida") { jugador.posicion = 0; jugador.dinero += 200; jugador.vueltas++; }
     }
 
     socket.on('comprarPropiedad', (datos) => {
@@ -217,8 +232,12 @@ io.on('connection', (socket) => {
     });
 
     socket.on('comprarCasa', (casillaIndex) => {
+        casillaIndex = parseInt(casillaIndex); 
+        if (casillaIndex === 12 || casillaIndex === 28) return; 
+
         const jugador = jugadores[socket.id];
         const propiedad = propiedades[casillaIndex];
+        
         if (propiedad && propiedad.dueno === socket.id && jugador.posicion === casillaIndex && !jugador.yaConstruyo) {
             const costoMejora = Math.floor(propiedad.precioBase * 0.5); 
             if (jugador.dinero >= costoMejora) {
