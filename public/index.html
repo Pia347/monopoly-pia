@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly - Fase 6 (Cárcel y Turnos)</title>
+    <title>Monopoly - Fase 7 (Cartas y Bote)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
         .panel { background: white; max-width: 900px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -14,7 +14,7 @@
         #juego { display: none; }
         .jugador-card { display: inline-block; padding: 10px; margin: 5px; border-radius: 8px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black;}
         
-        /* Tablero Circular Estilo CPN - MÁS GRANDE */
+        /* Tablero Circular */
         #tablero { 
             position: relative; 
             width: 850px; 
@@ -64,14 +64,15 @@
         .ficha:nth-child(3) { bottom: 20px; left: 5px; }
         .ficha:nth-child(4) { bottom: 20px; right: 5px; }
 
-        /* Pop-up de compra de propiedades */
-        #modalCompra {
+        /* Pop-ups (Modales) */
+        .modal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 25px; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.6);
-            z-index: 1000; text-align: center; border: 5px solid #2c3e50;
+            z-index: 1000; text-align: center; width: 300px;
         }
-        #btnComprar { background: #27ae60; font-size: 18px; padding: 10px 20px;}
-        #btnIgnorar { background: #e74c3c; font-size: 18px; padding: 10px 20px;}
+        #modalCompra { border: 5px solid #2c3e50; }
+        #modalCarta { border: 5px solid #2980b9; }
+        #modalCanales { border: 5px solid #27ae60; }
     </style>
 </head>
 <body>
@@ -85,7 +86,7 @@
     <div id="juego" class="panel">
         <h3 id="mensajeTurno" style="color: #2980b9; margin-top: 0;">Esperando jugadores...</h3>
         
-        <!-- Botones de Acción (El de Fianza es nuevo) -->
+        <!-- Botones de Acción -->
         <button id="btnFianza" onclick="pagarFianza()" style="background: #c0392b; display: none;">💸 Pagar Fianza ($50)</button>
         <button id="btnTirar" onclick="tirar()" style="display: none;">🎲 Tirar Dados</button>
         <button id="btnPasar" onclick="pasarTurno()" style="background: #e67e22; display: none;">⏭️ Terminar Turno</button>
@@ -94,20 +95,44 @@
         <div id="tablero"></div>
     </div>
 
-    <!-- Ventanita de compra -->
-    <div id="modalCompra">
+    <!-- 1. Ventanita de compra de propiedades -->
+    <div id="modalCompra" class="modal">
         <h2 style="margin-top:0; color:#2c3e50;">🏡 ¡Propiedad Disponible!</h2>
         <p id="textoCompra" style="font-size:20px; font-weight:bold;"></p>
-        <button id="btnComprar">Comprar</button>
-        <button id="btnIgnorar" onclick="document.getElementById('modalCompra').style.display='none'">Ignorar</button>
+        <button id="btnComprar" style="background:#27ae60; font-size:18px; padding:10px 20px;">Comprar</button>
+        <button onclick="document.getElementById('modalCompra').style.display='none'" style="background:#e74c3c; font-size:18px; padding:10px 20px;">Ignorar</button>
+    </div>
+
+    <!-- 2. Ventanita de Cofre CPN -->
+    <div id="modalCarta" class="modal">
+        <h2 style="margin-top:0; color:#2980b9;">💳 Cofre CPN</h2>
+        <p id="textoCarta" style="font-size:18px; font-weight:bold;"></p>
+        <button onclick="document.getElementById('modalCarta').style.display='none'" style="background: #3498db; font-size: 18px; padding: 10px 20px;">Aceptar</button>
+    </div>
+
+    <!-- 3. Ventanita de Canales de Atención -->
+    <div id="modalCanales" class="modal">
+        <h2 style="margin-top:0; color:#27ae60;">📱 Canales de Atención</h2>
+        <p id="textoCartaCanales" style="font-size:18px; font-weight:bold;"></p>
+        <button onclick="document.getElementById('modalCanales').style.display='none'" style="background: #2ecc71; font-size: 18px; padding: 10px 20px;">Aceptar</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
 
-          // REEMPLAZA ESTO CON TU LISTA DE 40 CASILLAS
-        const datosTablero = [
+        // ---------------------------------------------------------
+        // LISTA DE CASILLAS (Aquí pones los datos de tus propiedades)
+        // ---------------------------------------------------------
+        const datosTablero = [];
+        for (let i = 0; i < 40; i++) {
+            if (i === 0) datosTablero.push({ nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "" });
+            else if (i === 10) datosTablero.push({ nombre: "Cárcel / Solo Visitas", precio: 0, color: "#ecf0f1", imagen: "" });
+            else if (i === 20) datosTablero.push({ nombre: "Parada Libre", precio: 0, color: "#ecf0f1", imagen: "" });
+            else if (i === 30) datosTablero.push({ nombre: "¡Ve a la Cárcel!", precio: 0, color: "#ecf0f1", imagen: "" });
+            else if (i === 2 || i === 17 || i === 33) datosTablero.push({ nombre: "Cofre CPN", precio: 0, color: "#3498db", imagen: "" });
+            else if (i === 7 || i === 22 || i === 36) datosTablero.push({ nombre: "Canales de Atención", precio: 0, color: "#2ecc71", imagen: "" });
+            else {
             { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png"},
             { nombre: "Parque Nacional Cajas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png",rentas: [2, 10, 30, 90, 160, 250] },
             { nombre: "Cofre CPN", precio: 0, color: "#FFFFFF", imagen: "https://cdn-icons-png.flaticon.com/512/1444/1444613.png" },
@@ -151,18 +176,23 @@
         ];
 
 
+            }
+        }
+        // ---------------------------------------------------------
 
         function crearTablero() {
             const tablero = document.getElementById('tablero');
-tablero.innerHTML = `
+            
+            // Textos centrales y Bote acumulado
+            tablero.innerHTML = `
                 <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;">
                     <div style="color:white; font-size:32px; font-weight:bold; letter-spacing:2px; text-shadow: 0 0 10px rgba(255,255,255,0.3);">MONOPOLY</div>
                     <div id="textoBote" style="color:#f1c40f; font-size:24px; font-weight:bold; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:20px; border:2px solid #f1c40f; box-shadow: 0 0 15px rgba(241,196,15,0.4);">Bote: $0</div>
                 </div>
             `;
+
             for(let i = 0; i < 40; i++) {
                 const info = datosTablero[i];
-                
                 const casilla = document.createElement('div');
                 casilla.className = 'casilla';
                 casilla.id = 'casilla-' + i;
@@ -192,7 +222,7 @@ tablero.innerHTML = `
             document.getElementById('juego').style.display = 'block';
         }
 
-        // --- SISTEMA DE TURNOS Y ALERTAS ---
+        // --- SISTEMA DE TURNOS Y JUGADORES ---
         let miTurno = false;
         let estoyEnCarcel = false;
 
@@ -242,17 +272,20 @@ tablero.innerHTML = `
                 btnTirar.style.opacity = '1';
                 btnPasar.style.display = 'inline-block';
                 
-                if (estoyEnCarcel) {
-                    btnFianza.style.display = 'inline-block';
-                } else {
-                    btnFianza.style.display = 'none';
-                }
+                if (estoyEnCarcel) btnFianza.style.display = 'inline-block';
+                else btnFianza.style.display = 'none';
             } else {
                 mensaje.innerText = "Turno de otro jugador...";
                 btnTirar.style.display = 'none';
                 btnPasar.style.display = 'none';
                 btnFianza.style.display = 'none';
             }
+        });
+
+        // Actualizar el numerito del bote en el centro del tablero
+        socket.on('actualizarBote', (monto) => {
+            const textoBote = document.getElementById('textoBote');
+            if(textoBote) textoBote.innerText = `Bote: $${monto}`;
         });
 
         function pagarFianza() {
@@ -272,10 +305,19 @@ tablero.innerHTML = `
         }
 
         function pasarTurno() {
-            if(miTurno) {
-                socket.emit('terminarTurno');
-            }
+            if(miTurno) socket.emit('terminarTurno');
         }
+
+        // --- VENTANAS DE CARTAS ---
+        socket.on('mostrarCartaCPN', (datos) => {
+            document.getElementById('textoCarta').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
+            document.getElementById('modalCarta').style.display = 'block';
+        });
+
+        socket.on('mostrarCartaCanales', (datos) => {
+            document.getElementById('textoCartaCanales').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
+            document.getElementById('modalCanales').style.display = 'block';
+        });
 
         // --- COMPRAS Y ALQUILERES ---
         socket.on('preguntarCompra', (casillaIndex) => {
@@ -333,12 +375,6 @@ tablero.innerHTML = `
 
         socket.on('pagoAlquiler', (datos) => {
             alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} de alquiler a ${datos.cobrador}`);
-        });
-        socket.on('actualizarBote', (monto) => {
-            const textoBote = document.getElementById('textoBote');
-            if(textoBote) {
-                textoBote.innerText = `Bote: $${monto}`;
-            }
         });
     </script>
 </body>
