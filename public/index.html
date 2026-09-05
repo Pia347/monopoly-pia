@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly CPN - Fase 8</title>
+    <title>Monopoly CPN - Fase 9 (Tratos)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
         .panel { background: white; max-width: 900px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        input, button { padding: 10px; margin: 5px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+        input, button, select { padding: 10px; margin: 5px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
         button { background: #00796b; color: white; cursor: pointer; border: none; font-weight: bold; }
         button:disabled { background: #95a5a6; cursor: not-allowed; }
         
@@ -58,22 +58,21 @@
         .precio { padding: 2px; font-size: 11px; font-weight: bold; color: #2e7d32; }
         .imagen-casilla { width: 25px; height: 25px; object-fit: contain; margin: 2px auto 0 auto; display: block; }
         
-        /* Fichas */
         .ficha { width: 12px; height: 12px; border-radius: 50%; position: absolute; border: 1px solid white; box-shadow: 0 0 3px black; z-index: 10; transition: all 0.3s ease; }
         .ficha:nth-child(1) { top: 25px; left: 5px; }
         .ficha:nth-child(2) { top: 25px; right: 5px; }
         .ficha:nth-child(3) { bottom: 20px; left: 5px; }
         .ficha:nth-child(4) { bottom: 20px; right: 5px; }
 
-        /* Pop-ups (Modales) */
+        /* Modales */
         .modal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 25px; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.6);
-            z-index: 1000; text-align: center; width: 300px;
+            z-index: 1000; text-align: center; width: 350px; border: 5px solid #34495e;
+            max-height: 80vh; overflow-y: auto;
         }
-        #modalCompra { border: 5px solid #2c3e50; }
-        #modalCarta { border: 5px solid #2980b9; }
-        #modalCanales { border: 5px solid #27ae60; }
+        .zona-trato { background: #f1f2f6; padding: 10px; margin: 10px 0; border-radius: 8px; text-align: left; }
+        .checkbox-prop { display: block; font-size: 14px; margin: 5px 0; }
     </style>
 </head>
 <body>
@@ -87,10 +86,11 @@
     <div id="juego" class="panel">
         <h3 id="mensajeTurno" style="color: #2980b9; margin-top: 0;">Esperando jugadores...</h3>
         
-        <!-- Botones de Acción Completos -->
+        <!-- Botones de Acción -->
         <button id="btnPedirPrestamo" onclick="pedirPrestamo()" style="background: #8e44ad; display: none;">🏦 Pedir Préstamo ($500)</button>
         <button id="btnPagarPrestamo" onclick="pagarPrestamo()" style="background: #2c3e50; display: none;">💵 Pagar Préstamo ($550)</button>
         <button id="btnFianza" onclick="pagarFianza()" style="background: #c0392b; display: none;">💸 Pagar Fianza ($50)</button>
+        <button id="btnNegociar" onclick="abrirPanelTrato()" style="background: #3498db; display: none;">🤝 Negociar</button>
         <button id="btnTirar" onclick="tirar()" style="display: none;">🎲 Tirar Dados</button>
         <button id="btnPasar" onclick="pasarTurno()" style="background: #e67e22; display: none;">⏭️ Terminar Turno</button>
         
@@ -98,31 +98,62 @@
         <div id="tablero"></div>
     </div>
 
-    <!-- Modales -->
+    <!-- Modales Base -->
     <div id="modalCompra" class="modal">
         <h2 style="margin-top:0; color:#2c3e50;">🏡 ¡Propiedad Disponible!</h2>
         <p id="textoCompra" style="font-size:20px; font-weight:bold;"></p>
         <button id="btnComprar" style="background:#27ae60; font-size:18px; padding:10px 20px;">Comprar</button>
         <button onclick="document.getElementById('modalCompra').style.display='none'" style="background:#e74c3c; font-size:18px; padding:10px 20px;">Ignorar</button>
     </div>
+    <div id="modalCarta" class="modal"><h2 style="margin-top:0; color:#2980b9;">💳 Cofre CPN</h2><p id="textoCarta" style="font-size:18px; font-weight:bold;"></p><button onclick="document.getElementById('modalCarta').style.display='none'" style="background: #3498db; padding: 10px 20px;">Aceptar</button></div>
+    <div id="modalCanales" class="modal"><h2 style="margin-top:0; color:#27ae60;">📱 Canales de Atención</h2><p id="textoCartaCanales" style="font-size:18px; font-weight:bold;"></p><button onclick="document.getElementById('modalCanales').style.display='none'" style="background: #2ecc71; padding: 10px 20px;">Aceptar</button></div>
 
-    <div id="modalCarta" class="modal">
-        <h2 style="margin-top:0; color:#2980b9;">💳 Cofre CPN</h2>
-        <p id="textoCarta" style="font-size:18px; font-weight:bold;"></p>
-        <button onclick="document.getElementById('modalCarta').style.display='none'" style="background: #3498db; font-size: 18px; padding: 10px 20px;">Aceptar</button>
+    <!-- Modal Formulario Trato -->
+    <div id="modalCrearTrato" class="modal" style="width: 450px;">
+        <h2 style="margin-top:0; color:#34495e;">🤝 Proponer Trato</h2>
+        
+        <label>Negociar con:</label>
+        <select id="tratoJugadorDestino" onchange="cargarPropiedadesDestino()" style="width: 90%;"></select>
+
+        <div class="zona-trato">
+            <h4 style="margin:0 0 5px 0; color:#c0392b;">Lo que YO OFREZCO:</h4>
+            💰 Dinero: <input type="number" id="tratoDineroOfrecido" value="0" min="0" style="width: 80px;">
+            <div id="listaMisPropiedades" style="margin-top:10px; border-top:1px solid #ccc; padding-top:5px;"></div>
+        </div>
+
+        <div class="zona-trato">
+            <h4 style="margin:0 0 5px 0; color:#27ae60;">Lo que YO PIDO:</h4>
+            💰 Dinero: <input type="number" id="tratoDineroPedido" value="0" min="0" style="width: 80px;">
+            <div id="listaSusPropiedades" style="margin-top:10px; border-top:1px solid #ccc; padding-top:5px;"></div>
+        </div>
+
+        <button onclick="enviarTrato()" style="background:#3498db; font-size:16px;">Enviar Oferta</button>
+        <button onclick="document.getElementById('modalCrearTrato').style.display='none'" style="background:#7f8c8d;">Cancelar</button>
     </div>
 
-    <div id="modalCanales" class="modal">
-        <h2 style="margin-top:0; color:#27ae60;">📱 Canales de Atención</h2>
-        <p id="textoCartaCanales" style="font-size:18px; font-weight:bold;"></p>
-        <button onclick="document.getElementById('modalCanales').style.display='none'" style="background: #2ecc71; font-size: 18px; padding: 10px 20px;">Aceptar</button>
+    <!-- Modal Recibir Trato -->
+    <div id="modalRecibirTrato" class="modal" style="width: 400px; border-color:#f39c12;">
+        <h2 style="margin-top:0; color:#d35400;">🔔 ¡Nueva Oferta de Trato!</h2>
+        <p id="textoQuienPropone" style="font-weight:bold;"></p>
+        
+        <div class="zona-trato" style="background:#e8f8f5;">
+            <h4 style="margin:0; color:#27ae60;">Te ofrecen:</h4>
+            <ul id="listaMeOfrecen" style="margin:5px 0; padding-left:20px; font-size:14px;"></ul>
+        </div>
+
+        <div class="zona-trato" style="background:#fadbd8;">
+            <h4 style="margin:0; color:#c0392b;">A cambio de:</h4>
+            <ul id="listaMePiden" style="margin:5px 0; padding-left:20px; font-size:14px;"></ul>
+        </div>
+
+        <button id="btnAceptarTrato" style="background:#27ae60; padding:10px 20px;">Aceptar Trato</button>
+        <button id="btnRechazarTrato" style="background:#e74c3c; padding:10px 20px;">Rechazar</button>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
 
-        // TU LISTA DE CASILLAS OFICIALES (Actualizada con Impuestos en 200)
         const datosTablero = [
             { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png"},
             { nombre: "Parque Nacional Cajas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png",rentas: [2, 10, 30, 90, 160, 250] },
@@ -174,18 +205,14 @@
                     <div id="textoBote" style="color:#f1c40f; font-size:24px; font-weight:bold; background:rgba(0,0,0,0.5); padding:5px 15px; border-radius:20px; border:2px solid #f1c40f; box-shadow: 0 0 15px rgba(241,196,15,0.4);">Bote: $0</div>
                 </div>
             `;
-
             for(let i = 0; i < 40; i++) {
                 const info = datosTablero[i];
                 const casilla = document.createElement('div');
                 casilla.className = 'casilla';
                 casilla.id = 'casilla-' + i;
-                
                 const angulo = i * 9; 
                 casilla.style.transform = `translate(-50%, -50%) rotate(${angulo}deg) translateY(-380px)`;
-
                 const etiquetaImagen = info.imagen ? `<img src="${info.imagen}" class="imagen-casilla">` : '';
-
                 casilla.innerHTML = `
                     <div class="color-bar" style="background-color: ${info.color};"></div>
                     ${etiquetaImagen}
@@ -195,7 +222,6 @@
                 tablero.appendChild(casilla);
             }
         }
-        
         crearTablero();
 
         function entrarAlJuego() {
@@ -206,17 +232,15 @@
             document.getElementById('juego').style.display = 'block';
         }
 
-        // --- SISTEMA GLOBAL Y BOTONES ---
+        // --- SISTEMA GLOBAL ---
         let miTurno = false;
         window.jugadoresLocal = {};
+        window.propiedadesLocal = {}; // Guardamos las propiedades globalmente para los tratos
 
-        socket.on('alertaGlobal', (mensaje) => {
-            alert(mensaje);
-        });
+        socket.on('alertaGlobal', (mensaje) => alert(mensaje));
 
         socket.on('actualizarJugadores', (jugadores) => {
             window.jugadoresLocal = jugadores;
-            
             const contenedor = document.getElementById('lista-jugadores');
             contenedor.innerHTML = ''; 
             document.querySelectorAll('.ficha').forEach(f => f.remove());
@@ -229,7 +253,6 @@
                 
                 const etiquetaDeuda = j.prestamo.activo ? `<br><small style="color:#ffcccc;">🏦 Deuda: $550</small>` : '';
                 div.innerHTML = `👤 ${j.nombre} | 💰 $${j.dinero} ${etiquetaDeuda}`;
-                
                 contenedor.appendChild(div);
 
                 const casillaDestino = document.getElementById('casilla-' + j.posicion);
@@ -243,127 +266,12 @@
             actualizarBotones();
         });
 
-        socket.on('actualizarTurno', (idTurno) => {
-            miTurno = (socket.id === idTurno);
-            actualizarBotones();
-        });
-
-        function actualizarBotones() {
-            if (!miTurno) {
-                document.getElementById('btnTirar').style.display = 'none';
-                document.getElementById('btnPasar').style.display = 'none';
-                document.getElementById('btnFianza').style.display = 'none';
-                document.getElementById('btnPedirPrestamo').style.display = 'none';
-                document.getElementById('btnPagarPrestamo').style.display = 'none';
-                document.getElementById('mensajeTurno').innerText = "Turno de otro jugador...";
-                return;
-            }
-
-            document.getElementById('mensajeTurno').innerText = "¡Es tu turno!";
-            
-            const miJugador = window.jugadoresLocal[socket.id];
-            if (!miJugador) return;
-
-            // CANDADO VISUAL: Depende de si ya tiró el dado
-            if (!miJugador.yaTiro) {
-                // AÚN NO TIRA: Solo se ve el botón de los dados
-                document.getElementById('btnTirar').style.display = 'inline-block';
-                document.getElementById('btnTirar').disabled = false;
-                document.getElementById('btnTirar').style.opacity = '1';
-                
-                document.getElementById('btnPasar').style.display = 'none'; // Oculta Terminar Turno
-            } else {
-                // YA TIRÓ: Se bloquean los dados y aparece Terminar Turno
-                document.getElementById('btnTirar').style.display = 'inline-block';
-                document.getElementById('btnTirar').disabled = true;
-                document.getElementById('btnTirar').style.opacity = '0.5';
-                
-                document.getElementById('btnPasar').style.display = 'inline-block'; // Muestra Terminar Turno
-            }
-
-            // Fianza de Cárcel
-            document.getElementById('btnFianza').style.display = miJugador.enCarcel ? 'inline-block' : 'none';
-
-            // Botones de Préstamo
-            if (miJugador.prestamo.activo) {
-                document.getElementById('btnPagarPrestamo').style.display = 'inline-block';
-                document.getElementById('btnPedirPrestamo').style.display = 'none';
-            } else {
-                document.getElementById('btnPedirPrestamo').style.display = 'inline-block';
-                document.getElementById('btnPagarPrestamo').style.display = 'none';
-            }
-        }
-
-        function pedirPrestamo() {
-            if (miTurno && confirm("¿Pedir $500? Tendrás que pagar $550 antes de dar una vuelta completa o el banco los cobrará a la fuerza.")) {
-                socket.emit('pedirPrestamo');
-            }
-        }
-
-        function pagarPrestamo() {
-            if (miTurno) socket.emit('pagarPrestamo');
-        }
-
-        function pagarFianza() {
-            if (miTurno) socket.emit('pagarFianza');
-        }
-
-        function tirar() { 
-            if (miTurno) socket.emit('tirarDado'); 
-        }
-
-        function pasarTurno() {
-            if (miTurno) socket.emit('terminarTurno');
-        }
-
-        socket.on('actualizarBote', (monto) => {
-            const textoBote = document.getElementById('textoBote');
-            if(textoBote) textoBote.innerText = `Bote: $${monto}`;
-        });
-
-        // --- VENTANAS DE COMPRA Y CARTAS ---
-        socket.on('mostrarCartaCPN', (datos) => {
-            document.getElementById('textoCarta').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
-            document.getElementById('modalCarta').style.display = 'block';
-        });
-
-        socket.on('mostrarCartaCanales', (datos) => {
-            document.getElementById('textoCartaCanales').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
-            document.getElementById('modalCanales').style.display = 'block';
-        });
-
-        socket.on('preguntarCompra', (casillaIndex) => {
-            const info = datosTablero[casillaIndex];
-            if (!info || !info.precio || info.precio === 0) return;
-
-            document.getElementById('textoCompra').innerText = `¿Quieres comprar ${info.nombre} por $${info.precio}?`;
-            document.getElementById('modalCompra').style.display = 'block';
-            
-            document.getElementById('btnComprar').onclick = function() {
-                socket.emit('comprarPropiedad', { 
-                    casilla: casillaIndex, 
-                    precio: info.precio,
-                    rentas: info.rentas || [10, 20, 50, 100, 150, 200] 
-                });
-                document.getElementById('modalCompra').style.display = 'none'; 
-            };
-        });
-
-        socket.on('preguntarConstruccion', (casillaIndex) => {
-            const info = datosTablero[casillaIndex];
-            const costo = Math.floor(info.precio * 0.5);
-            
-            if (confirm(`¡Caíste de nuevo en ${info.nombre}!\n¿Quieres construir una casa/hotel por $${costo}?`)) {
-                socket.emit('comprarCasa', casillaIndex);
-            }
-        });
-
         socket.on('actualizarPropiedades', (propiedades) => {
+            window.propiedadesLocal = propiedades; // Guarda estado local
             document.querySelectorAll('.casilla').forEach(c => {
                 c.style.boxShadow = 'none';
                 c.querySelectorAll('.icono-casa').forEach(v => v.remove()); 
             });
-            
             for (let casillaIndex in propiedades) {
                 const casillaHTML = document.getElementById('casilla-' + casillaIndex);
                 if (casillaHTML) {
@@ -385,6 +293,190 @@
             }
         });
 
+        socket.on('actualizarTurno', (idTurno) => {
+            miTurno = (socket.id === idTurno);
+            actualizarBotones();
+        });
+
+        function actualizarBotones() {
+            if (!miTurno) {
+                document.getElementById('btnTirar').style.display = 'none';
+                document.getElementById('btnPasar').style.display = 'none';
+                document.getElementById('btnFianza').style.display = 'none';
+                document.getElementById('btnPedirPrestamo').style.display = 'none';
+                document.getElementById('btnPagarPrestamo').style.display = 'none';
+                document.getElementById('btnNegociar').style.display = 'none';
+                document.getElementById('mensajeTurno').innerText = "Turno de otro jugador...";
+                return;
+            }
+
+            document.getElementById('mensajeTurno').innerText = "¡Es tu turno!";
+            document.getElementById('btnNegociar').style.display = 'inline-block'; // Botón Negociar Activo
+
+            const miJugador = window.jugadoresLocal[socket.id];
+            if (!miJugador) return;
+
+            if (!miJugador.yaTiro) {
+                document.getElementById('btnTirar').style.display = 'inline-block';
+                document.getElementById('btnTirar').disabled = false;
+                document.getElementById('btnTirar').style.opacity = '1';
+                document.getElementById('btnPasar').style.display = 'none'; 
+            } else {
+                document.getElementById('btnTirar').style.display = 'inline-block';
+                document.getElementById('btnTirar').disabled = true;
+                document.getElementById('btnTirar').style.opacity = '0.5';
+                document.getElementById('btnPasar').style.display = 'inline-block'; 
+            }
+
+            document.getElementById('btnFianza').style.display = miJugador.enCarcel ? 'inline-block' : 'none';
+
+            if (miJugador.prestamo.activo) {
+                document.getElementById('btnPagarPrestamo').style.display = 'inline-block';
+                document.getElementById('btnPedirPrestamo').style.display = 'none';
+            } else {
+                document.getElementById('btnPedirPrestamo').style.display = 'inline-block';
+                document.getElementById('btnPagarPrestamo').style.display = 'none';
+            }
+        }
+
+        // --- FUNCIONES TRADING (NEGOCIACIÓN) ---
+        function abrirPanelTrato() {
+            const selectDestino = document.getElementById('tratoJugadorDestino');
+            selectDestino.innerHTML = '<option value="">-- Selecciona un jugador --</option>';
+            
+            // Llenar jugadores disponibles
+            for (let id in window.jugadoresLocal) {
+                if (id !== socket.id) {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.innerText = window.jugadoresLocal[id].nombre;
+                    selectDestino.appendChild(opt);
+                }
+            }
+
+            // Llenar MIS propiedades
+            const divMisProp = document.getElementById('listaMisPropiedades');
+            divMisProp.innerHTML = '';
+            for(let i in window.propiedadesLocal) {
+                if(window.propiedadesLocal[i].dueno === socket.id) {
+                    divMisProp.innerHTML += `<label class="checkbox-prop"><input type="checkbox" class="check-mia" value="${i}"> ${datosTablero[i].nombre}</label>`;
+                }
+            }
+            if(divMisProp.innerHTML === '') divMisProp.innerHTML = '<i>No tienes propiedades.</i>';
+
+            document.getElementById('listaSusPropiedades').innerHTML = '<i>Selecciona un jugador primero.</i>';
+            document.getElementById('tratoDineroOfrecido').value = 0;
+            document.getElementById('tratoDineroPedido').value = 0;
+            
+            document.getElementById('modalCrearTrato').style.display = 'block';
+        }
+
+        function cargarPropiedadesDestino() {
+            const idDestino = document.getElementById('tratoJugadorDestino').value;
+            const divSusProp = document.getElementById('listaSusPropiedades');
+            divSusProp.innerHTML = '';
+
+            if(!idDestino) {
+                divSusProp.innerHTML = '<i>Selecciona un jugador primero.</i>';
+                return;
+            }
+
+            for(let i in window.propiedadesLocal) {
+                if(window.propiedadesLocal[i].dueno === idDestino) {
+                    divSusProp.innerHTML += `<label class="checkbox-prop"><input type="checkbox" class="check-suya" value="${i}"> ${datosTablero[i].nombre}</label>`;
+                }
+            }
+            if(divSusProp.innerHTML === '') divSusProp.innerHTML = '<i>Este jugador no tiene propiedades.</i>';
+        }
+
+        function enviarTrato() {
+            const idDestino = document.getElementById('tratoJugadorDestino').value;
+            if(!idDestino) return alert("Debes seleccionar un jugador para negociar.");
+
+            const dineroOfrecido = parseInt(document.getElementById('tratoDineroOfrecido').value) || 0;
+            const dineroPedido = parseInt(document.getElementById('tratoDineroPedido').value) || 0;
+
+            const propiedadesOfrecidas = Array.from(document.querySelectorAll('.check-mia:checked')).map(cb => parseInt(cb.value));
+            const propiedadesPedidas = Array.from(document.querySelectorAll('.check-suya:checked')).map(cb => parseInt(cb.value));
+
+            socket.emit('proponerTrato', {
+                jugadorDestino: idDestino,
+                dineroOfrecido: dineroOfrecido,
+                dineroPedido: dineroPedido,
+                propiedadesOfrecidas: propiedadesOfrecidas,
+                propiedadesPedidas: propiedadesPedidas
+            });
+
+            document.getElementById('modalCrearTrato').style.display = 'none';
+            alert("Oferta enviada. Esperando respuesta...");
+        }
+
+        // Receptor de la oferta (el jugador al que le proponen el trato)
+        let ofertaPendiente = null;
+        socket.on('recibirOfertaTrato', (datos) => {
+            ofertaPendiente = datos;
+            document.getElementById('textoQuienPropone').innerText = `👤 ${datos.nombreOrigen} quiere hacer un trato contigo.`;
+
+            const ulMeOfrecen = document.getElementById('listaMeOfrecen');
+            ulMeOfrecen.innerHTML = '';
+            if(datos.oferta.dineroOfrecido > 0) ulMeOfrecen.innerHTML += `<li>💰 $${datos.oferta.dineroOfrecido}</li>`;
+            datos.oferta.propiedadesOfrecidas.forEach(i => ulMeOfrecen.innerHTML += `<li>🏡 ${datosTablero[i].nombre}</li>`);
+            if(ulMeOfrecen.innerHTML === '') ulMeOfrecen.innerHTML = '<li><i>Nada</i></li>';
+
+            const ulMePiden = document.getElementById('listaMePiden');
+            ulMePiden.innerHTML = '';
+            if(datos.oferta.dineroPedido > 0) ulMePiden.innerHTML += `<li>💰 $${datos.oferta.dineroPedido}</li>`;
+            datos.oferta.propiedadesPedidas.forEach(i => ulMePiden.innerHTML += `<li>🏡 ${datosTablero[i].nombre}</li>`);
+            if(ulMePiden.innerHTML === '') ulMePiden.innerHTML = '<li><i>Nada</i></li>';
+
+            document.getElementById('modalRecibirTrato').style.display = 'block';
+        });
+
+        document.getElementById('btnAceptarTrato').onclick = function() {
+            socket.emit('responderTrato', { ...ofertaPendiente, aceptado: true });
+            document.getElementById('modalRecibirTrato').style.display = 'none';
+        };
+
+        document.getElementById('btnRechazarTrato').onclick = function() {
+            socket.emit('responderTrato', { ...ofertaPendiente, aceptado: false });
+            document.getElementById('modalRecibirTrato').style.display = 'none';
+        };
+
+        // --- BOTONES BÁSICOS ---
+        function pedirPrestamo() { if (miTurno) socket.emit('pedirPrestamo'); }
+        function pagarPrestamo() { if (miTurno) socket.emit('pagarPrestamo'); }
+        function pagarFianza() { if (miTurno) socket.emit('pagarFianza'); }
+        function tirar() { if (miTurno) socket.emit('tirarDado'); }
+        function pasarTurno() { if (miTurno) socket.emit('terminarTurno'); }
+        socket.on('actualizarBote', (monto) => { const tb = document.getElementById('textoBote'); if(tb) tb.innerText = `Bote: $${monto}`; });
+
+        // --- VENTANAS DE COMPRA Y CARTAS ---
+        socket.on('mostrarCartaCPN', (datos) => {
+            document.getElementById('textoCarta').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
+            document.getElementById('modalCarta').style.display = 'block';
+        });
+        socket.on('mostrarCartaCanales', (datos) => {
+            document.getElementById('textoCartaCanales').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
+            document.getElementById('modalCanales').style.display = 'block';
+        });
+        socket.on('preguntarCompra', (casillaIndex) => {
+            const info = datosTablero[casillaIndex];
+            if (!info || !info.precio || info.precio === 0) return;
+            document.getElementById('textoCompra').innerText = `¿Quieres comprar ${info.nombre} por $${info.precio}?`;
+            document.getElementById('modalCompra').style.display = 'block';
+            
+            document.getElementById('btnComprar').onclick = function() {
+                socket.emit('comprarPropiedad', { casilla: casillaIndex, precio: info.precio, rentas: info.rentas || [10, 20, 50, 100, 150, 200] });
+                document.getElementById('modalCompra').style.display = 'none'; 
+            };
+        });
+        socket.on('preguntarConstruccion', (casillaIndex) => {
+            const info = datosTablero[casillaIndex];
+            const costo = Math.floor(info.precio * 0.5);
+            if (confirm(`¡Caíste de nuevo en ${info.nombre}!\n¿Quieres construir una casa/hotel por $${costo}?`)) {
+                socket.emit('comprarCasa', casillaIndex);
+            }
+        });
         socket.on('pagoAlquiler', (datos) => {
             alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} a ${datos.cobrador}`);
         });

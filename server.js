@@ -52,11 +52,11 @@ io.on('connection', (socket) => {
     socket.on('unirseAlJuego', (nombre) => {
         jugadores[socket.id] = {
             id: socket.id, nombre: nombre, 
-            dinero: 1000, // MODIFICADO: Dinero inicial de $1000
+            dinero: 1000, 
             posicion: 0, 
             color: colores[colorIndex % colores.length],
             vueltas: 0, yaConstruyo: false, yaTiro: false, enCarcel: false, turnosCarcel: 0,
-            prestamo: { activo: false, limitePosicion: 0 } // NUEVO: Sistema de Préstamo
+            prestamo: { activo: false, limitePosicion: 0 }
         };
         colorIndex++;
         ordenJugadores.push(socket.id); 
@@ -67,20 +67,17 @@ io.on('connection', (socket) => {
         io.emit('actualizarBote', boteCentro); 
     });
 
-    // NUEVO: Petición de Préstamo
     socket.on('pedirPrestamo', () => {
         if (ordenJugadores[turnoActual] !== socket.id) return;
         const jugador = jugadores[socket.id];
         if (jugador && !jugador.prestamo.activo) {
             jugador.dinero += 500;
-            // Se debe pagar antes de dar exactamente una vuelta (40 casillas de distancia absoluta)
             jugador.prestamo = { activo: true, limitePosicion: (jugador.vueltas * 40) + jugador.posicion + 40 };
             io.emit('alertaGlobal', `🏦 ${jugador.nombre} ha solicitado un préstamo bancario de $500.`);
             io.emit('actualizarJugadores', jugadores);
         }
     });
 
-    // NUEVO: Pago manual del Préstamo
     socket.on('pagarPrestamo', () => {
         if (ordenJugadores[turnoActual] !== socket.id) return;
         const jugador = jugadores[socket.id];
@@ -99,7 +96,6 @@ io.on('connection', (socket) => {
     socket.on('pagarFianza', () => {
         if (ordenJugadores[turnoActual] !== socket.id) return;
         const jugador = jugadores[socket.id];
-        
         if (jugador && jugador.enCarcel && jugador.dinero >= 50 && !jugador.yaTiro) {
             jugador.dinero -= 50; boteCentro += 50; 
             jugador.enCarcel = false; jugador.turnosCarcel = 0;
@@ -154,7 +150,6 @@ io.on('connection', (socket) => {
                 jugador.vueltas++;
             }
 
-            // NUEVO: Cobro Automático del Préstamo si se pasa de la raya
             if (jugador.prestamo.activo) {
                 const posAbsoluta = (jugador.vueltas * 40) + jugador.posicion;
                 if (posAbsoluta >= jugador.prestamo.limitePosicion) {
@@ -289,20 +284,62 @@ io.on('connection', (socket) => {
     socket.on('terminarTurno', () => {
         if (ordenJugadores[turnoActual] === socket.id) {
             const jugador = jugadores[socket.id];
-            
-            // CANDADO ESTRICTO: Si no ha tirado, el servidor ignora el clic
             if (jugador && !jugador.yaTiro) return; 
-
-            if (jugador) { 
-                jugador.yaTiro = false; 
-                jugador.yaConstruyo = false; 
-            }
-            
+            if (jugador) { jugador.yaTiro = false; jugador.yaConstruyo = false; }
             turnoActual++;
             if (turnoActual >= ordenJugadores.length) turnoActual = 0;
-            
             io.emit('actualizarTurno', ordenJugadores[turnoActual]);
-            io.emit('actualizarJugadores', jugadores); // ESTO FALTABA: Refresca el estado para todos
+            io.emit('actualizarJugadores', jugadores);
+        }
+    });
+
+    // --- NUEVO: SISTEMA DE NEGOCIACIÓN ---
+    socket.on('proponerTrato', (datosTrato) => {
+        // Envia la oferta privada al jugador objetivo
+        io.to(datosTrato.jugadorDestino).emit('recibirOfertaTrato', {
+            idOrigen: socket.id,
+            nombreOrigen: jugadores[socket.id].nombre,
+            oferta: datosTrato
+        });
+    });
+
+    socket.on('responderTrato', (respuesta) => {
+        if (respuesta.aceptado) {
+            const idOrigen = respuesta.idOrigen; // El que propuso
+            const idDestino = socket.id;         // El que aceptó
+            
+            const jOrigen = jugadores[idOrigen];
+            const jDestino = jugadores[idDestino];
+            const oferta = respuesta.oferta;
+
+            // Transferir Dinero
+            jOrigen.dinero -= oferta.dineroOfrecido;
+            jDestino.dinero += oferta.dineroOfrecido;
+
+            jDestino.dinero -= oferta.dineroPedido;
+            jOrigen.dinero += oferta.dineroPedido;
+
+            // Transferir Propiedades
+            oferta.propiedadesOfrecidas.forEach(indice => {
+                if (propiedades[indice]) {
+                    propiedades[indice].dueno = jDestino.id;
+                    propiedades[indice].colorDueno = jDestino.color;
+                }
+            });
+
+            oferta.propiedadesPedidas.forEach(indice => {
+                if (propiedades[indice]) {
+                    propiedades[indice].dueno = jOrigen.id;
+                    propiedades[indice].colorDueno = jOrigen.color;
+                }
+            });
+
+            io.emit('alertaGlobal', `🤝 ¡${jOrigen.nombre} y ${jDestino.nombre} han cerrado un trato comercial!`);
+            io.emit('actualizarJugadores', jugadores);
+            io.emit('actualizarPropiedades', propiedades);
+        } else {
+            // Notificar rechazo
+            io.to(respuesta.idOrigen).emit('alertaGlobal', `❌ ${jugadores[socket.id].nombre} rechazó tu oferta de trato.`);
         }
     });
 
