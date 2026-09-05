@@ -352,31 +352,6 @@
         }
         });
 
-        socket.on('actualizarBote', (monto) => {
-            const textoBote = document.getElementById('textoBote');
-            if(textoBote) textoBote.innerText = `Bote: $${monto}`;
-        });
-
-        function pagarFianza() {
-            if(miTurno && estoyEnCarcel) {
-                socket.emit('pagarFianza');
-                document.getElementById('btnFianza').style.display = 'none';
-            }
-        }
-
-        function tirar() { 
-            if(miTurno) {
-                socket.emit('tirarDado'); 
-                document.getElementById('btnTirar').disabled = true;
-                document.getElementById('btnTirar').style.opacity = '0.5';
-                document.getElementById('btnFianza').style.display = 'none';
-            }
-        }
-
-        function pasarTurno() {
-            if(miTurno) socket.emit('terminarTurno');
-        }
-
         // --- VENTANAS DE CARTAS ---
         socket.on('mostrarCartaCPN', (datos) => {
             document.getElementById('textoCarta').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
