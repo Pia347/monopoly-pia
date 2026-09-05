@@ -289,10 +289,20 @@ io.on('connection', (socket) => {
     socket.on('terminarTurno', () => {
         if (ordenJugadores[turnoActual] === socket.id) {
             const jugador = jugadores[socket.id];
-            if (jugador) { jugador.yaTiro = false; jugador.yaConstruyo = false; }
+            
+            // CANDADO ESTRICTO: Si no ha tirado, el servidor ignora el clic
+            if (jugador && !jugador.yaTiro) return; 
+
+            if (jugador) { 
+                jugador.yaTiro = false; 
+                jugador.yaConstruyo = false; 
+            }
+            
             turnoActual++;
             if (turnoActual >= ordenJugadores.length) turnoActual = 0;
+            
             io.emit('actualizarTurno', ordenJugadores[turnoActual]);
+            io.emit('actualizarJugadores', jugadores); // ESTO FALTABA: Refresca el estado para todos
         }
     });
 

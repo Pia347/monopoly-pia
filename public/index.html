@@ -260,23 +260,31 @@
             }
 
             document.getElementById('mensajeTurno').innerText = "¡Es tu turno!";
-            document.getElementById('btnPasar').style.display = 'inline-block';
             
             const miJugador = window.jugadoresLocal[socket.id];
             if (!miJugador) return;
 
+            // CANDADO VISUAL: Depende de si ya tiró el dado
             if (!miJugador.yaTiro) {
+                // AÚN NO TIRA: Solo se ve el botón de los dados
                 document.getElementById('btnTirar').style.display = 'inline-block';
                 document.getElementById('btnTirar').disabled = false;
                 document.getElementById('btnTirar').style.opacity = '1';
+                
+                document.getElementById('btnPasar').style.display = 'none'; // Oculta Terminar Turno
             } else {
+                // YA TIRÓ: Se bloquean los dados y aparece Terminar Turno
                 document.getElementById('btnTirar').style.display = 'inline-block';
                 document.getElementById('btnTirar').disabled = true;
                 document.getElementById('btnTirar').style.opacity = '0.5';
+                
+                document.getElementById('btnPasar').style.display = 'inline-block'; // Muestra Terminar Turno
             }
 
+            // Fianza de Cárcel
             document.getElementById('btnFianza').style.display = miJugador.enCarcel ? 'inline-block' : 'none';
 
+            // Botones de Préstamo
             if (miJugador.prestamo.activo) {
                 document.getElementById('btnPagarPrestamo').style.display = 'inline-block';
                 document.getElementById('btnPedirPrestamo').style.display = 'none';
