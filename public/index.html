@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly CPN - Fase 7</title>
+    <title>Monopoly CPN - Fase 8</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
         .panel { background: white; max-width: 900px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -87,10 +87,9 @@
     <div id="juego" class="panel">
         <h3 id="mensajeTurno" style="color: #2980b9; margin-top: 0;">Esperando jugadores...</h3>
         
-        <!-- Botones de Acción -->
+        <!-- Botones de Acción Completos -->
         <button id="btnPedirPrestamo" onclick="pedirPrestamo()" style="background: #8e44ad; display: none;">🏦 Pedir Préstamo ($500)</button>
         <button id="btnPagarPrestamo" onclick="pagarPrestamo()" style="background: #2c3e50; display: none;">💵 Pagar Préstamo ($550)</button>
-        
         <button id="btnFianza" onclick="pagarFianza()" style="background: #c0392b; display: none;">💸 Pagar Fianza ($50)</button>
         <button id="btnTirar" onclick="tirar()" style="display: none;">🎲 Tirar Dados</button>
         <button id="btnPasar" onclick="pasarTurno()" style="background: #e67e22; display: none;">⏭️ Terminar Turno</button>
@@ -99,7 +98,7 @@
         <div id="tablero"></div>
     </div>
 
-    <!-- 1. Ventanita de compra de propiedades -->
+    <!-- Modales -->
     <div id="modalCompra" class="modal">
         <h2 style="margin-top:0; color:#2c3e50;">🏡 ¡Propiedad Disponible!</h2>
         <p id="textoCompra" style="font-size:20px; font-weight:bold;"></p>
@@ -107,14 +106,12 @@
         <button onclick="document.getElementById('modalCompra').style.display='none'" style="background:#e74c3c; font-size:18px; padding:10px 20px;">Ignorar</button>
     </div>
 
-    <!-- 2. Ventanita de Cofre CPN -->
     <div id="modalCarta" class="modal">
         <h2 style="margin-top:0; color:#2980b9;">💳 Cofre CPN</h2>
         <p id="textoCarta" style="font-size:18px; font-weight:bold;"></p>
         <button onclick="document.getElementById('modalCarta').style.display='none'" style="background: #3498db; font-size: 18px; padding: 10px 20px;">Aceptar</button>
     </div>
 
-    <!-- 3. Ventanita de Canales de Atención -->
     <div id="modalCanales" class="modal">
         <h2 style="margin-top:0; color:#27ae60;">📱 Canales de Atención</h2>
         <p id="textoCartaCanales" style="font-size:18px; font-weight:bold;"></p>
@@ -125,7 +122,7 @@
     <script>
         const socket = io();
 
-        // TU LISTA DE CASILLAS OFICIALES
+        // TU LISTA DE CASILLAS OFICIALES (Actualizada con Impuestos en 200)
         const datosTablero = [
             { nombre: "SALIDA", precio: 0, color: "#ecf0f1", imagen: "https://cdn-icons-png.flaticon.com/512/1168/1168096.png"},
             { nombre: "Parque Nacional Cajas", precio: 60, color: "#D99511", imagen: "https://cdn-icons-png.flaticon.com/512/1040/1040225.png",rentas: [2, 10, 30, 90, 160, 250] },
@@ -171,8 +168,6 @@
 
         function crearTablero() {
             const tablero = document.getElementById('tablero');
-            
-            // Textos centrales y Bote acumulado
             tablero.innerHTML = `
                 <div style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); text-align:center; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;">
                     <div style="color:white; font-size:32px; font-weight:bold; letter-spacing:2px; text-shadow: 0 0 10px rgba(255,255,255,0.3);">MONOPOLY CPN</div>
@@ -197,10 +192,10 @@
                     <div class="nombre">${info.nombre}</div>
                     <div class="precio">${info.precio > 0 ? '$' + info.precio : ''}</div>
                 `;
-                
                 tablero.appendChild(casilla);
             }
         }
+        
         crearTablero();
 
         function entrarAlJuego() {
@@ -211,45 +206,13 @@
             document.getElementById('juego').style.display = 'block';
         }
 
-        // --- SISTEMA DE TURNOS Y JUGADORES ---
+        // --- SISTEMA GLOBAL Y BOTONES ---
         let miTurno = false;
-        let estoyEnCarcel = false;
+        window.jugadoresLocal = {};
 
         socket.on('alertaGlobal', (mensaje) => {
             alert(mensaje);
         });
-
-        socket.on('actualizarJugadores', (jugadores) => {
-            if (jugadores[socket.id]) {
-                estoyEnCarcel = jugadores[socket.id].enCarcel;
-            }
-            
-            const contenedor = document.getElementById('lista-jugadores');
-            contenedor.innerHTML = ''; 
-            document.querySelectorAll('.ficha').forEach(f => f.remove());
-
-            for (let id in jugadores) {
-                const j = jugadores[id];
-                const div = document.createElement('div');
-                div.className = 'jugador-card';
-                div.style.backgroundColor = j.color;
-                div.innerHTML = `👤 ${j.nombre} | 💰 $${j.dinero}`;
-                contenedor.appendChild(div);
-
-                const casillaDestino = document.getElementById('casilla-' + j.posicion);
-                if(casillaDestino) {
-                    const ficha = document.createElement('div');
-                    ficha.className = 'ficha';
-                    ficha.style.backgroundColor = j.color;
-                    casillaDestino.appendChild(ficha);
-                }
-            }
-        });
-
-        let miTurno = false;
-
-        // Guarda la info global para poder usarla al acomodar los botones
-        window.jugadoresLocal = {};
 
         socket.on('actualizarJugadores', (jugadores) => {
             window.jugadoresLocal = jugadores;
@@ -264,7 +227,6 @@
                 div.className = 'jugador-card';
                 div.style.backgroundColor = j.color;
                 
-                // Muestra un aviso de DEUDA si tiene un préstamo activo
                 const etiquetaDeuda = j.prestamo.activo ? `<br><small style="color:#ffcccc;">🏦 Deuda: $550</small>` : '';
                 div.innerHTML = `👤 ${j.nombre} | 💰 $${j.dinero} ${etiquetaDeuda}`;
                 
@@ -278,7 +240,6 @@
                     casillaDestino.appendChild(ficha);
                 }
             }
-            // Siempre que se actualiza algo, verificamos qué botones mostrar
             actualizarBotones();
         });
 
@@ -304,7 +265,6 @@
             const miJugador = window.jugadoresLocal[socket.id];
             if (!miJugador) return;
 
-            // Bloqueo del Dado
             if (!miJugador.yaTiro) {
                 document.getElementById('btnTirar').style.display = 'inline-block';
                 document.getElementById('btnTirar').disabled = false;
@@ -315,10 +275,8 @@
                 document.getElementById('btnTirar').style.opacity = '0.5';
             }
 
-            // Fianza de Cárcel
             document.getElementById('btnFianza').style.display = miJugador.enCarcel ? 'inline-block' : 'none';
 
-            // Préstamo Bancario
             if (miJugador.prestamo.activo) {
                 document.getElementById('btnPagarPrestamo').style.display = 'inline-block';
                 document.getElementById('btnPedirPrestamo').style.display = 'none';
@@ -328,9 +286,8 @@
             }
         }
 
-        // FUNCIONES DE LOS BOTONES
         function pedirPrestamo() {
-            if (miTurno && confirm("¿Pedir $500? Tendrás que pagar $550 antes de dar una vuelta completa o te los cobrarán a la fuerza.")) {
+            if (miTurno && confirm("¿Pedir $500? Tendrás que pagar $550 antes de dar una vuelta completa o el banco los cobrará a la fuerza.")) {
                 socket.emit('pedirPrestamo');
             }
         }
@@ -350,9 +307,13 @@
         function pasarTurno() {
             if (miTurno) socket.emit('terminarTurno');
         }
+
+        socket.on('actualizarBote', (monto) => {
+            const textoBote = document.getElementById('textoBote');
+            if(textoBote) textoBote.innerText = `Bote: $${monto}`;
         });
 
-        // --- VENTANAS DE CARTAS ---
+        // --- VENTANAS DE COMPRA Y CARTAS ---
         socket.on('mostrarCartaCPN', (datos) => {
             document.getElementById('textoCarta').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
             document.getElementById('modalCarta').style.display = 'block';
@@ -363,7 +324,6 @@
             document.getElementById('modalCanales').style.display = 'block';
         });
 
-        // --- COMPRAS Y ALQUILERES ---
         socket.on('preguntarCompra', (casillaIndex) => {
             const info = datosTablero[casillaIndex];
             if (!info || !info.precio || info.precio === 0) return;
@@ -418,7 +378,7 @@
         });
 
         socket.on('pagoAlquiler', (datos) => {
-            alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} de alquiler a ${datos.cobrador}`);
+            alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} a ${datos.cobrador}`);
         });
     </script>
 </body>
