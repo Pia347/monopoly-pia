@@ -88,6 +88,9 @@
         <h3 id="mensajeTurno" style="color: #2980b9; margin-top: 0;">Esperando jugadores...</h3>
         
         <!-- Botones de Acción -->
+        <button id="btnPedirPrestamo" onclick="pedirPrestamo()" style="background: #8e44ad; display: none;">🏦 Pedir Préstamo ($500)</button>
+        <button id="btnPagarPrestamo" onclick="pagarPrestamo()" style="background: #2c3e50; display: none;">💵 Pagar Préstamo ($550)</button>
+        
         <button id="btnFianza" onclick="pagarFianza()" style="background: #c0392b; display: none;">💸 Pagar Fianza ($50)</button>
         <button id="btnTirar" onclick="tirar()" style="display: none;">🎲 Tirar Dados</button>
         <button id="btnPasar" onclick="pasarTurno()" style="background: #e67e22; display: none;">⏭️ Terminar Turno</button>
@@ -243,29 +246,110 @@
             }
         });
 
+        let miTurno = false;
+
+        // Guarda la info global para poder usarla al acomodar los botones
+        window.jugadoresLocal = {};
+
+        socket.on('actualizarJugadores', (jugadores) => {
+            window.jugadoresLocal = jugadores;
+            
+            const contenedor = document.getElementById('lista-jugadores');
+            contenedor.innerHTML = ''; 
+            document.querySelectorAll('.ficha').forEach(f => f.remove());
+
+            for (let id in jugadores) {
+                const j = jugadores[id];
+                const div = document.createElement('div');
+                div.className = 'jugador-card';
+                div.style.backgroundColor = j.color;
+                
+                // Muestra un aviso de DEUDA si tiene un préstamo activo
+                const etiquetaDeuda = j.prestamo.activo ? `<br><small style="color:#ffcccc;">🏦 Deuda: $550</small>` : '';
+                div.innerHTML = `👤 ${j.nombre} | 💰 $${j.dinero} ${etiquetaDeuda}`;
+                
+                contenedor.appendChild(div);
+
+                const casillaDestino = document.getElementById('casilla-' + j.posicion);
+                if(casillaDestino) {
+                    const ficha = document.createElement('div');
+                    ficha.className = 'ficha';
+                    ficha.style.backgroundColor = j.color;
+                    casillaDestino.appendChild(ficha);
+                }
+            }
+            // Siempre que se actualiza algo, verificamos qué botones mostrar
+            actualizarBotones();
+        });
+
         socket.on('actualizarTurno', (idTurno) => {
             miTurno = (socket.id === idTurno);
-            
-            const btnTirar = document.getElementById('btnTirar');
-            const btnPasar = document.getElementById('btnPasar');
-            const btnFianza = document.getElementById('btnFianza');
-            const mensaje = document.getElementById('mensajeTurno');
+            actualizarBotones();
+        });
 
-            if (miTurno) {
-                mensaje.innerText = "¡Es tu turno!";
-                btnTirar.style.display = 'inline-block';
-                btnTirar.disabled = false;
-                btnTirar.style.opacity = '1';
-                btnPasar.style.display = 'inline-block';
-                
-                if (estoyEnCarcel) btnFianza.style.display = 'inline-block';
-                else btnFianza.style.display = 'none';
-            } else {
-                mensaje.innerText = "Turno de otro jugador...";
-                btnTirar.style.display = 'none';
-                btnPasar.style.display = 'none';
-                btnFianza.style.display = 'none';
+        function actualizarBotones() {
+            if (!miTurno) {
+                document.getElementById('btnTirar').style.display = 'none';
+                document.getElementById('btnPasar').style.display = 'none';
+                document.getElementById('btnFianza').style.display = 'none';
+                document.getElementById('btnPedirPrestamo').style.display = 'none';
+                document.getElementById('btnPagarPrestamo').style.display = 'none';
+                document.getElementById('mensajeTurno').innerText = "Turno de otro jugador...";
+                return;
             }
+
+            document.getElementById('mensajeTurno').innerText = "¡Es tu turno!";
+            document.getElementById('btnPasar').style.display = 'inline-block';
+            
+            const miJugador = window.jugadoresLocal[socket.id];
+            if (!miJugador) return;
+
+            // Bloqueo del Dado
+            if (!miJugador.yaTiro) {
+                document.getElementById('btnTirar').style.display = 'inline-block';
+                document.getElementById('btnTirar').disabled = false;
+                document.getElementById('btnTirar').style.opacity = '1';
+            } else {
+                document.getElementById('btnTirar').style.display = 'inline-block';
+                document.getElementById('btnTirar').disabled = true;
+                document.getElementById('btnTirar').style.opacity = '0.5';
+            }
+
+            // Fianza de Cárcel
+            document.getElementById('btnFianza').style.display = miJugador.enCarcel ? 'inline-block' : 'none';
+
+            // Préstamo Bancario
+            if (miJugador.prestamo.activo) {
+                document.getElementById('btnPagarPrestamo').style.display = 'inline-block';
+                document.getElementById('btnPedirPrestamo').style.display = 'none';
+            } else {
+                document.getElementById('btnPedirPrestamo').style.display = 'inline-block';
+                document.getElementById('btnPagarPrestamo').style.display = 'none';
+            }
+        }
+
+        // FUNCIONES DE LOS BOTONES
+        function pedirPrestamo() {
+            if (miTurno && confirm("¿Pedir $500? Tendrás que pagar $550 antes de dar una vuelta completa o te los cobrarán a la fuerza.")) {
+                socket.emit('pedirPrestamo');
+            }
+        }
+
+        function pagarPrestamo() {
+            if (miTurno) socket.emit('pagarPrestamo');
+        }
+
+        function pagarFianza() {
+            if (miTurno) socket.emit('pagarFianza');
+        }
+
+        function tirar() { 
+            if (miTurno) socket.emit('tirarDado'); 
+        }
+
+        function pasarTurno() {
+            if (miTurno) socket.emit('terminarTurno');
+        }
         });
 
         socket.on('actualizarBote', (monto) => {

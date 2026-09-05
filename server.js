@@ -17,24 +17,16 @@ let ordenJugadores = [];
 let turnoActual = 0; 
 let boteCentro = 0; 
 
-// Grupos de propiedades normales (Monopolio)
 const gruposColor = [
-    [1, 3],           
-    [6, 8, 9],        
-    [11, 13, 14],     
-    [16, 18, 19],     
-    [21, 23, 24],     
-    [26, 27, 29],     
-    [31, 32, 34],     
-    [37, 39]          
+    [1, 3], [6, 8, 9], [11, 13, 14], [16, 18, 19], 
+    [21, 23, 24], [26, 27, 29], [31, 32, 34], [37, 39]          
 ];
 
-// Los 4 Volcanes (Casillas 5, 15, 25, 35)
 const volcanes = [5, 15, 25, 35];
 
 const cartasCPN = [
     { texto: "¡Error a favor en el sistema de la Cooperativa! Recibes $200.", accion: "ganar", valor: 200 },
-    { texto: "Pago de impuestos municipales en Santo Domingo. Paga $50 al centro.", accion: "pagar", valor: 50 },
+    { texto: "Pago de impuestos municipales. Paga $50 al centro.", accion: "pagar", valor: 50 },
     { texto: "Ventas excelentes en tu tienda esta semana. Recibes $100.", accion: "ganar", valor: 100 },
     { texto: "Gastos de trámites de titulación. Paga $100 al centro.", accion: "pagar", valor: 100 },
     { texto: "¡Ganas la lotería local! Recibes $150.", accion: "ganar", valor: 150 },
@@ -44,12 +36,12 @@ const cartasCPN = [
 ];
 
 const cartasCanales = [
-    { texto: "Haces un pago rápido por la App Móvil y ganas un sorteo. Recibes $100.", accion: "ganar", valor: 100 },
-    { texto: "Pides un duplicado de tarjeta en Ventanilla. Paga $20 al centro.", accion: "pagar", valor: 20 },
-    { texto: "Actualizas tus datos en la sucursal virtual. Recibes $50 por la campaña.", accion: "ganar", valor: 50 },
-    { texto: "Llamada larga al Call Center desde el celular. Paga $15 de saldo al centro.", accion: "pagar", valor: 15 },
-    { texto: "Recibes una transferencia internacional por ventanilla. Recibes $150.", accion: "ganar", valor: 150 },
-    { texto: "Cajero automático retenido por intento de fraude. Ve directamente a la cárcel.", accion: "carcel", valor: 0 },
+    { texto: "Haces un pago rápido por la App Móvil. Recibes $100.", accion: "ganar", valor: 100 },
+    { texto: "Pides un duplicado de tarjeta. Paga $20 al centro.", accion: "pagar", valor: 20 },
+    { texto: "Actualizas tus datos en la sucursal virtual. Recibes $50.", accion: "ganar", valor: 50 },
+    { texto: "Llamada al Call Center. Paga $15 al centro.", accion: "pagar", valor: 15 },
+    { texto: "Recibes una transferencia internacional. Recibes $150.", accion: "ganar", valor: 150 },
+    { texto: "Cajero retenido por intento de fraude. Ve a la cárcel.", accion: "carcel", valor: 0 },
     { texto: "Uso de cajero de otra red. Paga comisión de $30 al centro.", accion: "pagar", valor: 30 },
     { texto: "Campaña de ahorro programado. Avanza hasta la SALIDA y cobra $200.", accion: "salida", valor: 0 }
 ];
@@ -59,9 +51,12 @@ io.on('connection', (socket) => {
 
     socket.on('unirseAlJuego', (nombre) => {
         jugadores[socket.id] = {
-            id: socket.id, nombre: nombre, dinero: 1500, posicion: 0, 
+            id: socket.id, nombre: nombre, 
+            dinero: 1000, // MODIFICADO: Dinero inicial de $1000
+            posicion: 0, 
             color: colores[colorIndex % colores.length],
-            vueltas: 0, yaConstruyo: false, yaTiro: false, enCarcel: false, turnosCarcel: 0 
+            vueltas: 0, yaConstruyo: false, yaTiro: false, enCarcel: false, turnosCarcel: 0,
+            prestamo: { activo: false, limitePosicion: 0 } // NUEVO: Sistema de Préstamo
         };
         colorIndex++;
         ordenJugadores.push(socket.id); 
@@ -70,6 +65,35 @@ io.on('connection', (socket) => {
         io.emit('actualizarPropiedades', propiedades);
         io.emit('actualizarTurno', ordenJugadores[turnoActual]);
         io.emit('actualizarBote', boteCentro); 
+    });
+
+    // NUEVO: Petición de Préstamo
+    socket.on('pedirPrestamo', () => {
+        if (ordenJugadores[turnoActual] !== socket.id) return;
+        const jugador = jugadores[socket.id];
+        if (jugador && !jugador.prestamo.activo) {
+            jugador.dinero += 500;
+            // Se debe pagar antes de dar exactamente una vuelta (40 casillas de distancia absoluta)
+            jugador.prestamo = { activo: true, limitePosicion: (jugador.vueltas * 40) + jugador.posicion + 40 };
+            io.emit('alertaGlobal', `🏦 ${jugador.nombre} ha solicitado un préstamo bancario de $500.`);
+            io.emit('actualizarJugadores', jugadores);
+        }
+    });
+
+    // NUEVO: Pago manual del Préstamo
+    socket.on('pagarPrestamo', () => {
+        if (ordenJugadores[turnoActual] !== socket.id) return;
+        const jugador = jugadores[socket.id];
+        if (jugador && jugador.prestamo.activo) {
+            if (jugador.dinero >= 550) {
+                jugador.dinero -= 550;
+                jugador.prestamo.activo = false;
+                io.emit('alertaGlobal', `💵 ${jugador.nombre} ha pagado su deuda de $550 al banco.`);
+                io.emit('actualizarJugadores', jugadores);
+            } else {
+                socket.emit('alertaGlobal', 'No tienes $550 para pagar el préstamo todavía.');
+            }
+        }
     });
 
     socket.on('pagarFianza', () => {
@@ -129,6 +153,17 @@ io.on('connection', (socket) => {
                 jugador.dinero += 200;
                 jugador.vueltas++;
             }
+
+            // NUEVO: Cobro Automático del Préstamo si se pasa de la raya
+            if (jugador.prestamo.activo) {
+                const posAbsoluta = (jugador.vueltas * 40) + jugador.posicion;
+                if (posAbsoluta >= jugador.prestamo.limitePosicion) {
+                    jugador.dinero -= 550;
+                    jugador.prestamo.activo = false;
+                    io.emit('alertaGlobal', `🚨 ¡Tiempo agotado! El banco cobró automáticamente $550 a ${jugador.nombre} por el préstamo.`);
+                }
+            }
+
             if (jugador.posicion === 30) {
                 jugador.posicion = 10; jugador.enCarcel = true; jugador.turnosCarcel = 0;
                 io.emit('alertaGlobal', `🚓 ¡${jugador.nombre} ha caído en la Policía y se va a la CÁRCEL!`);
@@ -177,29 +212,19 @@ io.on('connection', (socket) => {
             if (propiedad) {
                 if (propiedad.dueno !== socket.id) {
                     let alquiler = 0;
-
                     if (jugador.posicion === 12 || jugador.posicion === 28) {
-                        // Oficinas CPN
                         let oficinasPropias = 0;
                         if (propiedades[12] && propiedades[12].dueno === propiedad.dueno) oficinasPropias++;
                         if (propiedades[28] && propiedades[28].dueno === propiedad.dueno) oficinasPropias++;
                         alquiler = totalDado * (oficinasPropias === 2 ? 10 : 4);
-                        
                     } else if (volcanes.includes(jugador.posicion)) {
-                        // NUEVO: Lógica de los Volcanes (5, 15, 25, 35)
                         let volcanesPropios = 0;
-                        volcanes.forEach(idx => {
-                            if (propiedades[idx] && propiedades[idx].dueno === propiedad.dueno) volcanesPropios++;
-                        });
-                        alquiler = volcanesPropios * 50; // 1=$50, 2=$100, 3=$150, 4=$200
-                        
+                        volcanes.forEach(idx => { if (propiedades[idx] && propiedades[idx].dueno === propiedad.dueno) volcanesPropios++; });
+                        alquiler = volcanesPropios * 50; 
                     } else {
-                        // Propiedades Normales
-                        if (propiedad.hotel) {
-                            alquiler = propiedad.rentas[5];
-                        } else if (propiedad.casas > 0) {
-                            alquiler = propiedad.rentas[propiedad.casas];
-                        } else {
+                        if (propiedad.hotel) alquiler = propiedad.rentas[5];
+                        else if (propiedad.casas > 0) alquiler = propiedad.rentas[propiedad.casas];
+                        else {
                             let tieneMonopolio = false;
                             for (let grupo of gruposColor) {
                                 if (grupo.includes(jugador.posicion)) {
@@ -217,11 +242,7 @@ io.on('connection', (socket) => {
                     io.emit('pagoAlquiler', { pagador: jugador.nombre, cobrador: jugadores[propiedad.dueno] ? jugadores[propiedad.dueno].nombre : 'el banco', monto: alquiler });
                     io.emit('actualizarJugadores', jugadores);
                 } else {
-                    // Cae en su propiedad. Verificamos que NO sea oficina NI volcán antes de ofrecer construir.
-                    if (!propiedad.hotel && !jugador.yaConstruyo && 
-                        jugador.posicion !== 12 && jugador.posicion !== 28 && 
-                        !volcanes.includes(jugador.posicion)) { 
-                        
+                    if (!propiedad.hotel && !jugador.yaConstruyo && jugador.posicion !== 12 && jugador.posicion !== 28 && !volcanes.includes(jugador.posicion)) { 
                         io.to(socket.id).emit('preguntarConstruccion', jugador.posicion); 
                     }
                 }
@@ -250,10 +271,7 @@ io.on('connection', (socket) => {
 
     socket.on('comprarCasa', (casillaIndex) => {
         casillaIndex = parseInt(casillaIndex); 
-        
-        // REGLA: Bloqueo estricto para Oficinas CPN y Volcanes
         if (casillaIndex === 12 || casillaIndex === 28 || volcanes.includes(casillaIndex)) return; 
-
         const jugador = jugadores[socket.id];
         const propiedad = propiedades[casillaIndex];
         
