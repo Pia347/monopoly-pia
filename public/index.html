@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monopoly CPN - Fase 9 (Tratos)</title>
+    <title>Monopoly CPN - Fase Final</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #e0f7fa; margin: 0; padding: 20px; text-align: center; }
         .panel { background: white; max-width: 900px; margin: 20px auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
@@ -27,34 +27,16 @@
         
         .casilla { 
             position: absolute; 
-            top: 50%; 
-            left: 50%; 
-            width: 52px; 
-            height: 95px; 
-            background: white; 
-            border: 1px solid #7f8c8d; 
-            display: flex; 
-            flex-direction: column; 
-            border-radius: 4px;
-            overflow: hidden;
-            transform-origin: center center; 
-            cursor: pointer;
+            top: 50%; left: 50%; 
+            width: 52px; height: 95px; 
+            background: white; border: 1px solid #7f8c8d; 
+            display: flex; flex-direction: column; 
+            border-radius: 4px; overflow: hidden;
+            transform-origin: center center; cursor: pointer;
         }
 
         .color-bar { height: 20px; width: 100%; border-bottom: 2px solid #333; }
-        
-        .nombre { 
-            padding: 2px; 
-            font-size: 8px; 
-            font-weight: bold; 
-            flex-grow: 1; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            line-height: 1.1; 
-            text-align: center;
-        }
-        
+        .nombre { padding: 2px; font-size: 8px; font-weight: bold; flex-grow: 1; display: flex; align-items: center; justify-content: center; line-height: 1.1; text-align: center; }
         .precio { padding: 2px; font-size: 11px; font-weight: bold; color: #2e7d32; }
         .imagen-casilla { width: 25px; height: 25px; object-fit: contain; margin: 2px auto 0 auto; display: block; }
         
@@ -68,11 +50,20 @@
         .modal {
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: white; padding: 25px; border-radius: 12px; box-shadow: 0 0 30px rgba(0,0,0,0.6);
-            z-index: 1000; text-align: center; width: 350px; border: 5px solid #34495e;
-            max-height: 80vh; overflow-y: auto;
+            z-index: 1000; text-align: center; width: 350px; border: 5px solid #34495e; max-height: 80vh; overflow-y: auto;
         }
         .zona-trato { background: #f1f2f6; padding: 10px; margin: 10px 0; border-radius: 8px; text-align: left; }
         .checkbox-prop { display: block; font-size: 14px; margin: 5px 0; }
+
+        /* Estilos del Chat Flotante */
+        #chat-container {
+            position: fixed; bottom: 20px; right: 20px; width: 300px;
+            background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: none; flex-direction: column; z-index: 100;
+        }
+        #chat-header { background: #2980b9; color: white; padding: 10px; border-radius: 8px 8px 0 0; font-weight: bold; }
+        #chat-messages { height: 200px; overflow-y: auto; padding: 10px; font-size: 14px; text-align: left; display: flex; flex-direction: column; gap: 5px; background: #f9f9f9;}
+        #chat-input-container { display: flex; padding: 10px; border-top: 1px solid #ccc; background: #fff; border-radius: 0 0 8px 8px;}
     </style>
 </head>
 <body>
@@ -86,19 +77,30 @@
     <div id="juego" class="panel">
         <h3 id="mensajeTurno" style="color: #2980b9; margin-top: 0;">Esperando jugadores...</h3>
         
-        <!-- Botones de Acción -->
         <button id="btnPedirPrestamo" onclick="pedirPrestamo()" style="background: #8e44ad; display: none;">🏦 Pedir Préstamo ($500)</button>
         <button id="btnPagarPrestamo" onclick="pagarPrestamo()" style="background: #2c3e50; display: none;">💵 Pagar Préstamo ($550)</button>
         <button id="btnFianza" onclick="pagarFianza()" style="background: #c0392b; display: none;">💸 Pagar Fianza ($50)</button>
         <button id="btnNegociar" onclick="abrirPanelTrato()" style="background: #3498db; display: none;">🤝 Negociar</button>
         <button id="btnTirar" onclick="tirar()" style="display: none;">🎲 Tirar Dados</button>
+        
+        <!-- Botón dinámico que cambiará a Rojo si estás en Bancarrota -->
         <button id="btnPasar" onclick="pasarTurno()" style="background: #e67e22; display: none;">⏭️ Terminar Turno</button>
         
         <div id="lista-jugadores"></div>
         <div id="tablero"></div>
     </div>
 
-    <!-- Modales Base -->
+    <!-- CAJA DE CHAT FLOTANTE -->
+    <div id="chat-container">
+        <div id="chat-header">💬 Chat Global</div>
+        <div id="chat-messages"></div>
+        <div id="chat-input-container">
+            <input type="text" id="chat-input" placeholder="Negocia aquí..." style="flex: 1; margin: 0; padding: 5px;" onkeypress="if(event.key === 'Enter') enviarMensajeChat()">
+            <button onclick="enviarMensajeChat()" style="margin: 0 0 0 5px; padding: 5px 10px;">Enviar</button>
+        </div>
+    </div>
+
+    <!-- Modales de Propiedades, Cartas y Tratos -->
     <div id="modalCompra" class="modal">
         <h2 style="margin-top:0; color:#2c3e50;">🏡 ¡Propiedad Disponible!</h2>
         <p id="textoCompra" style="font-size:20px; font-weight:bold;"></p>
@@ -108,44 +110,21 @@
     <div id="modalCarta" class="modal"><h2 style="margin-top:0; color:#2980b9;">💳 Cofre CPN</h2><p id="textoCarta" style="font-size:18px; font-weight:bold;"></p><button onclick="document.getElementById('modalCarta').style.display='none'" style="background: #3498db; padding: 10px 20px;">Aceptar</button></div>
     <div id="modalCanales" class="modal"><h2 style="margin-top:0; color:#27ae60;">📱 Canales de Atención</h2><p id="textoCartaCanales" style="font-size:18px; font-weight:bold;"></p><button onclick="document.getElementById('modalCanales').style.display='none'" style="background: #2ecc71; padding: 10px 20px;">Aceptar</button></div>
 
-    <!-- Modal Formulario Trato -->
     <div id="modalCrearTrato" class="modal" style="width: 450px;">
         <h2 style="margin-top:0; color:#34495e;">🤝 Proponer Trato</h2>
-        
         <label>Negociar con:</label>
         <select id="tratoJugadorDestino" onchange="cargarPropiedadesDestino()" style="width: 90%;"></select>
-
-        <div class="zona-trato">
-            <h4 style="margin:0 0 5px 0; color:#c0392b;">Lo que YO OFREZCO:</h4>
-            💰 Dinero: <input type="number" id="tratoDineroOfrecido" value="0" min="0" style="width: 80px;">
-            <div id="listaMisPropiedades" style="margin-top:10px; border-top:1px solid #ccc; padding-top:5px;"></div>
-        </div>
-
-        <div class="zona-trato">
-            <h4 style="margin:0 0 5px 0; color:#27ae60;">Lo que YO PIDO:</h4>
-            💰 Dinero: <input type="number" id="tratoDineroPedido" value="0" min="0" style="width: 80px;">
-            <div id="listaSusPropiedades" style="margin-top:10px; border-top:1px solid #ccc; padding-top:5px;"></div>
-        </div>
-
+        <div class="zona-trato"><h4 style="margin:0 0 5px 0; color:#c0392b;">Lo que YO OFREZCO:</h4>💰 Dinero: <input type="number" id="tratoDineroOfrecido" value="0" min="0" style="width: 80px;"><div id="listaMisPropiedades" style="margin-top:10px; border-top:1px solid #ccc; padding-top:5px;"></div></div>
+        <div class="zona-trato"><h4 style="margin:0 0 5px 0; color:#27ae60;">Lo que YO PIDO:</h4>💰 Dinero: <input type="number" id="tratoDineroPedido" value="0" min="0" style="width: 80px;"><div id="listaSusPropiedades" style="margin-top:10px; border-top:1px solid #ccc; padding-top:5px;"></div></div>
         <button onclick="enviarTrato()" style="background:#3498db; font-size:16px;">Enviar Oferta</button>
         <button onclick="document.getElementById('modalCrearTrato').style.display='none'" style="background:#7f8c8d;">Cancelar</button>
     </div>
 
-    <!-- Modal Recibir Trato -->
     <div id="modalRecibirTrato" class="modal" style="width: 400px; border-color:#f39c12;">
         <h2 style="margin-top:0; color:#d35400;">🔔 ¡Nueva Oferta de Trato!</h2>
         <p id="textoQuienPropone" style="font-weight:bold;"></p>
-        
-        <div class="zona-trato" style="background:#e8f8f5;">
-            <h4 style="margin:0; color:#27ae60;">Te ofrecen:</h4>
-            <ul id="listaMeOfrecen" style="margin:5px 0; padding-left:20px; font-size:14px;"></ul>
-        </div>
-
-        <div class="zona-trato" style="background:#fadbd8;">
-            <h4 style="margin:0; color:#c0392b;">A cambio de:</h4>
-            <ul id="listaMePiden" style="margin:5px 0; padding-left:20px; font-size:14px;"></ul>
-        </div>
-
+        <div class="zona-trato" style="background:#e8f8f5;"><h4 style="margin:0; color:#27ae60;">Te ofrecen:</h4><ul id="listaMeOfrecen" style="margin:5px 0; padding-left:20px; font-size:14px;"></ul></div>
+        <div class="zona-trato" style="background:#fadbd8;"><h4 style="margin:0; color:#c0392b;">A cambio de:</h4><ul id="listaMePiden" style="margin:5px 0; padding-left:20px; font-size:14px;"></ul></div>
         <button id="btnAceptarTrato" style="background:#27ae60; padding:10px 20px;">Aceptar Trato</button>
         <button id="btnRechazarTrato" style="background:#e74c3c; padding:10px 20px;">Rechazar</button>
     </div>
@@ -230,12 +209,29 @@
             socket.emit('unirseAlJuego', nombre);
             document.getElementById('login').style.display = 'none';
             document.getElementById('juego').style.display = 'block';
+            document.getElementById('chat-container').style.display = 'flex'; // Muestra el chat
         }
+
+        // --- SISTEMA DE CHAT ---
+        function enviarMensajeChat() {
+            const input = document.getElementById('chat-input');
+            const texto = input.value.trim();
+            if (texto !== "") {
+                socket.emit('enviarMensaje', texto);
+                input.value = "";
+            }
+        }
+
+        socket.on('nuevoMensaje', (datos) => {
+            const chatBox = document.getElementById('chat-messages');
+            chatBox.innerHTML += `<div><b style="color:${datos.color};">${datos.nombre}:</b> ${datos.texto}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
 
         // --- SISTEMA GLOBAL ---
         let miTurno = false;
         window.jugadoresLocal = {};
-        window.propiedadesLocal = {}; // Guardamos las propiedades globalmente para los tratos
+        window.propiedadesLocal = {}; 
 
         socket.on('alertaGlobal', (mensaje) => alert(mensaje));
 
@@ -267,7 +263,7 @@
         });
 
         socket.on('actualizarPropiedades', (propiedades) => {
-            window.propiedadesLocal = propiedades; // Guarda estado local
+            window.propiedadesLocal = propiedades; 
             document.querySelectorAll('.casilla').forEach(c => {
                 c.style.boxShadow = 'none';
                 c.querySelectorAll('.icono-casa').forEach(v => v.remove()); 
@@ -299,9 +295,11 @@
         });
 
         function actualizarBotones() {
+            const btnPasar = document.getElementById('btnPasar');
+
             if (!miTurno) {
                 document.getElementById('btnTirar').style.display = 'none';
-                document.getElementById('btnPasar').style.display = 'none';
+                btnPasar.style.display = 'none';
                 document.getElementById('btnFianza').style.display = 'none';
                 document.getElementById('btnPedirPrestamo').style.display = 'none';
                 document.getElementById('btnPagarPrestamo').style.display = 'none';
@@ -311,21 +309,30 @@
             }
 
             document.getElementById('mensajeTurno').innerText = "¡Es tu turno!";
-            document.getElementById('btnNegociar').style.display = 'inline-block'; // Botón Negociar Activo
+            document.getElementById('btnNegociar').style.display = 'inline-block'; 
 
             const miJugador = window.jugadoresLocal[socket.id];
             if (!miJugador) return;
+
+            // SISTEMA DE BANCARROTA VISUAL
+            if (miJugador.dinero < 0) {
+                btnPasar.innerText = "💀 Declarar Bancarrota";
+                btnPasar.style.background = "#c0392b";
+            } else {
+                btnPasar.innerText = "⏭️ Terminar Turno";
+                btnPasar.style.background = "#e67e22";
+            }
 
             if (!miJugador.yaTiro) {
                 document.getElementById('btnTirar').style.display = 'inline-block';
                 document.getElementById('btnTirar').disabled = false;
                 document.getElementById('btnTirar').style.opacity = '1';
-                document.getElementById('btnPasar').style.display = 'none'; 
+                btnPasar.style.display = 'none'; 
             } else {
                 document.getElementById('btnTirar').style.display = 'inline-block';
                 document.getElementById('btnTirar').disabled = true;
                 document.getElementById('btnTirar').style.opacity = '0.5';
-                document.getElementById('btnPasar').style.display = 'inline-block'; 
+                btnPasar.style.display = 'inline-block'; 
             }
 
             document.getElementById('btnFianza').style.display = miJugador.enCarcel ? 'inline-block' : 'none';
@@ -344,7 +351,6 @@
             const selectDestino = document.getElementById('tratoJugadorDestino');
             selectDestino.innerHTML = '<option value="">-- Selecciona un jugador --</option>';
             
-            // Llenar jugadores disponibles
             for (let id in window.jugadoresLocal) {
                 if (id !== socket.id) {
                     const opt = document.createElement('option');
@@ -354,7 +360,6 @@
                 }
             }
 
-            // Llenar MIS propiedades
             const divMisProp = document.getElementById('listaMisPropiedades');
             divMisProp.innerHTML = '';
             for(let i in window.propiedadesLocal) {
@@ -399,19 +404,12 @@
             const propiedadesOfrecidas = Array.from(document.querySelectorAll('.check-mia:checked')).map(cb => parseInt(cb.value));
             const propiedadesPedidas = Array.from(document.querySelectorAll('.check-suya:checked')).map(cb => parseInt(cb.value));
 
-            socket.emit('proponerTrato', {
-                jugadorDestino: idDestino,
-                dineroOfrecido: dineroOfrecido,
-                dineroPedido: dineroPedido,
-                propiedadesOfrecidas: propiedadesOfrecidas,
-                propiedadesPedidas: propiedadesPedidas
-            });
+            socket.emit('proponerTrato', { jugadorDestino: idDestino, dineroOfrecido: dineroOfrecido, dineroPedido: dineroPedido, propiedadesOfrecidas: propiedadesOfrecidas, propiedadesPedidas: propiedadesPedidas });
 
             document.getElementById('modalCrearTrato').style.display = 'none';
             alert("Oferta enviada. Esperando respuesta...");
         }
 
-        // Receptor de la oferta (el jugador al que le proponen el trato)
         let ofertaPendiente = null;
         socket.on('recibirOfertaTrato', (datos) => {
             ofertaPendiente = datos;
@@ -436,7 +434,6 @@
             socket.emit('responderTrato', { ...ofertaPendiente, aceptado: true });
             document.getElementById('modalRecibirTrato').style.display = 'none';
         };
-
         document.getElementById('btnRechazarTrato').onclick = function() {
             socket.emit('responderTrato', { ...ofertaPendiente, aceptado: false });
             document.getElementById('modalRecibirTrato').style.display = 'none';
@@ -450,36 +447,21 @@
         function pasarTurno() { if (miTurno) socket.emit('terminarTurno'); }
         socket.on('actualizarBote', (monto) => { const tb = document.getElementById('textoBote'); if(tb) tb.innerText = `Bote: $${monto}`; });
 
-        // --- VENTANAS DE COMPRA Y CARTAS ---
-        socket.on('mostrarCartaCPN', (datos) => {
-            document.getElementById('textoCarta').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
-            document.getElementById('modalCarta').style.display = 'block';
-        });
-        socket.on('mostrarCartaCanales', (datos) => {
-            document.getElementById('textoCartaCanales').innerText = `👤 ${datos.jugador} sacó la siguiente carta:\n\n"${datos.carta}"`;
-            document.getElementById('modalCanales').style.display = 'block';
-        });
+        socket.on('mostrarCartaCPN', (datos) => { document.getElementById('textoCarta').innerText = `👤 ${datos.jugador} sacó:\n\n"${datos.carta}"`; document.getElementById('modalCarta').style.display = 'block'; });
+        socket.on('mostrarCartaCanales', (datos) => { document.getElementById('textoCartaCanales').innerText = `👤 ${datos.jugador} sacó:\n\n"${datos.carta}"`; document.getElementById('modalCanales').style.display = 'block'; });
         socket.on('preguntarCompra', (casillaIndex) => {
             const info = datosTablero[casillaIndex];
             if (!info || !info.precio || info.precio === 0) return;
             document.getElementById('textoCompra').innerText = `¿Quieres comprar ${info.nombre} por $${info.precio}?`;
             document.getElementById('modalCompra').style.display = 'block';
-            
-            document.getElementById('btnComprar').onclick = function() {
-                socket.emit('comprarPropiedad', { casilla: casillaIndex, precio: info.precio, rentas: info.rentas || [10, 20, 50, 100, 150, 200] });
-                document.getElementById('modalCompra').style.display = 'none'; 
-            };
+            document.getElementById('btnComprar').onclick = function() { socket.emit('comprarPropiedad', { casilla: casillaIndex, precio: info.precio, rentas: info.rentas || [10, 20, 50, 100, 150, 200] }); document.getElementById('modalCompra').style.display = 'none'; };
         });
         socket.on('preguntarConstruccion', (casillaIndex) => {
             const info = datosTablero[casillaIndex];
             const costo = Math.floor(info.precio * 0.5);
-            if (confirm(`¡Caíste de nuevo en ${info.nombre}!\n¿Quieres construir una casa/hotel por $${costo}?`)) {
-                socket.emit('comprarCasa', casillaIndex);
-            }
+            if (confirm(`¡Caíste de nuevo en ${info.nombre}!\n¿Quieres construir una casa/hotel por $${costo}?`)) socket.emit('comprarCasa', casillaIndex);
         });
-        socket.on('pagoAlquiler', (datos) => {
-            alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} a ${datos.cobrador}`);
-        });
+        socket.on('pagoAlquiler', (datos) => { alert(`💸 ¡Caja registradora! ${datos.pagador} pagó $${datos.monto} a ${datos.cobrador}`); });
     </script>
 </body>
 </html>
